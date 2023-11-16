@@ -8,10 +8,6 @@ import lombok.ToString;
 @Data
 @AllArgsConstructor
 public class Message {
-    @Override
-    public String toString() {
-        return "{\"type\": " + type + ", \"message\": " + message + "}";
-    }
 
     private int type;
 

@@ -16,7 +16,7 @@
     <div class="online">
       Online: {{ online }}
     </div>
-    <MdEditor v-model="text" :theme="theme" :language="language"/>
+    <MdEditor v-model="text" :theme="theme" :language="language" :toolbars-exclude="exclude"/>
   </div>
 </template>
 
@@ -30,6 +30,7 @@ let theme = ref('light');
 let language = ref('en-US');
 let text = ref('Hello Editor!');
 let online = ref('1');
+const exclude = ref(['github', 'save']);
 
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
@@ -42,19 +43,16 @@ function toggleLanguage(lang) {
 onMounted(() => {
   document.title = 'Collaborative Editor';
 
-  // Establish WebSocket connection
   let socketURL = 'ws://';
   socketURL += window.location.host;
   socketURL += '/CollaborativeHandler';
   console.log('socketURL:', socketURL);
   const socket = new WebSocket(socketURL);
 
-  // Send message on text change
   watch(text, (newValue) => {
-    socket.send(JSON.stringify(newValue));
+    socket.send(newValue.toString());
   });
 
-  // Receive message from server
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
     if (message.type === 1) {
