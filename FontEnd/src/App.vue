@@ -16,12 +16,12 @@
     <div class="online">
       Online: {{ online }}
     </div>
-    <MdEditor v-model="text" :theme="theme" :language="language" :toolbars-exclude="exclude"/>
+    <MdEditor v-model="text" :theme="theme" :language="language" :toolbars-exclude="exclude" :on-change="onChange"/>
   </div>
 </template>
 
 <script setup>
-import {onMounted, ref, watch} from 'vue';
+import {onMounted, ref} from 'vue';
 import {MdEditor} from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
 import '@/App.css';
@@ -32,6 +32,12 @@ let text = ref('Hello Editor!');
 let online = ref('1');
 const exclude = ref(['github', 'save']);
 
+let socket;
+let socketURL = 'ws://';
+socketURL += window.location.host;
+socketURL += '/CollaborativeHandler';
+console.log('socketURL:', socketURL);
+
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
 }
@@ -40,18 +46,15 @@ function toggleLanguage(lang) {
   language.value = lang;
 }
 
+const onChange = (change) => {
+  console.log('onChange:', change);
+  socket.send(change);
+};
+
 onMounted(() => {
   document.title = 'Collaborative Editor';
 
-  let socketURL = 'ws://';
-  socketURL += window.location.host;
-  socketURL += '/CollaborativeHandler';
-  console.log('socketURL:', socketURL);
-  const socket = new WebSocket(socketURL);
-
-  watch(text, (newValue) => {
-    socket.send(newValue.toString());
-  });
+  socket = new WebSocket(socketURL);
 
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
