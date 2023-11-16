@@ -25,7 +25,6 @@ import '@/App.css';
 
 const theme = ref('light');
 const language = ref('en-US');
-const tittle = ref("Collaborative Editor for Markdown")
 const text = ref('Hello Editor!');
 
 function toggleTheme() {
