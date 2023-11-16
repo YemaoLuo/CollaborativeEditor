@@ -2,10 +2,7 @@ package com.cpb.backend.handler;
 
 import com.cpb.backend.entity.Message;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.websocket.OnClose;
-import jakarta.websocket.OnMessage;
-import jakarta.websocket.OnOpen;
-import jakarta.websocket.Session;
+import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +38,7 @@ public class CollaborativeHandler {
     @OnClose
     @SneakyThrows
     public void onClose(Session session) {
+        session.close();
         sessions.remove(session);
         log.info("Session closed: " + session.getId());
         log.info("Number of sessions: " + sessions.size());
@@ -57,6 +55,14 @@ public class CollaborativeHandler {
             Message message = new Message(2, sharedText);
             sendAllMessage(mapper.writeValueAsString(message));
         }
+    }
+
+    @OnError
+    @SneakyThrows
+    public void onError(Session session, Throwable throwable) {
+        log.error("Error occurred: " + throwable.getMessage());
+        sessions.remove(session);
+        session.close();
     }
 
     @SneakyThrows
