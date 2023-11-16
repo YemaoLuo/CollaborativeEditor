@@ -9,8 +9,7 @@
   },
   "dependencies": {
     "md-editor-v3": "^4.8.3",
-    "vue": "^3.3.4",
-    "yjs": "^13.6.8"
+    "vue": "^3.3.4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.4.0",
