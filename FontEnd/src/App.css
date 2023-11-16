@@ -18,7 +18,7 @@
 
 .button-group {
     display: flex;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
 
 .theme-button {
@@ -57,4 +57,9 @@
 
 .language-button:hover {
     background-color: #aaa;
+}
+
+.online {
+    margin-bottom: 20px;
+    font-size: 20px;
 }
