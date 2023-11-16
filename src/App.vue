@@ -1,6 +1,8 @@
 <template>
   <div class="container">
-    <h1 class="topic">{{ tittle }}</h1>
+    <h1 class="topic">
+      {{ language === 'zh-CN' ? '在线协作Markdown编辑器' : 'Collaborative Editor for Markdown' }}
+    </h1>
     <div class="button-group">
       <button class="theme-button" :class="{ dark: theme === 'dark' }" @click="toggleTheme">
         {{ theme === 'light' ? 'Dark Theme' : 'Light Theme' }}
@@ -32,11 +34,6 @@ function toggleTheme() {
 
 function toggleLanguage(lang) {
   language.value = lang;
-  if (lang === "en-US") {
-    this.tittle = "Collaborative Editor for Markdown";
-  } else {
-    this.tittle = "在线协作Markdown编辑器";
-  }
 }
 
 onMounted(() => {
