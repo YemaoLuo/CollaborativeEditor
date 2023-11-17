@@ -36,9 +36,8 @@ import '@/App.css';
 
 let theme = ref('light');
 let language = ref('en-US');
-let text = ref('')
+let text = ref('');
 let online = ref('0');
-let isUpdatingText = false;
 const exclude = ref(['github', 'save']);
 const editorRef = ref<ExposeParam>();
 
@@ -47,30 +46,9 @@ let socketURL = 'ws://';
 let isConnected = ref(false);
 socketURL += window.location.host;
 socketURL += '/CollaborativeHandler';
-console.debug('socketURL:', socketURL);
+console.info('socketURL:', socketURL);
 
-function toggleTheme() {
-  theme.value = theme.value === 'light' ? 'dark' : 'light';
-  if (theme.value === 'dark') {
-    document.body.style.backgroundColor = 'black';
-    document.body.style.color = 'white';
-  } else {
-    document.body.style.backgroundColor = '';
-    document.body.style.color = '';
-  }
-}
-
-function toggleLanguage(lang) {
-  language.value = lang;
-}
-
-const getStatusTooltip = computed(() => {
-  if (isConnected.value) {
-    return language.value === 'zh-CN' ? '服务器连接成功' : 'Connected to server';
-  } else {
-    return language.value === 'zh-CN' ? '服务器断开连接' : 'Disconnected from server';
-  }
-});
+let enableOnChange = true;
 
 function getCursorPositionInDivElement(divElement) {
   const selection = window.getSelection();
@@ -135,19 +113,19 @@ function updateCursorPosition(oldText, newText, cursorPosition) {
     } else {
       return cursorPosition;
     }
-  }else if (newText.length < oldText.length) {
+  } else if (newText.length < oldText.length) {
     let delPos = findDeletedTextPositions(oldText, newText);
     let start = delPos[0];
     let end = delPos[1];
-    console.debug('start:', start, 'end:', end, 'cursorPosition:', cursorPosition);
+    console.info('start:', start, 'end:', end, 'cursorPosition:', cursorPosition);
     if (start >= cursorPosition) {
       return Math.min(cursorPosition, newText.length);
-    }else if (end < cursorPosition){
+    } else if (end < cursorPosition) {
       return Math.max(cursorPosition - (end - start + 1), 0);
     } else {
       return Math.max(0, start);
     }
-  }else {
+  } else {
     return cursorPosition;
   }
 }
@@ -180,28 +158,39 @@ function findAddedTextPositions(oldText, newText) {
   return addedPositions;
 }
 
-function updateText(newText) {
-  isUpdatingText = true;
-  text.value = newText;
-  nextTick(() => {
-    isUpdatingText = false;
-  });
+function toggleTheme() {
+  theme.value = theme.value === 'light' ? 'dark' : 'light';
+  if (theme.value === 'dark') {
+    document.body.style.backgroundColor = 'black';
+    document.body.style.color = 'white';
+  } else {
+    document.body.style.backgroundColor = '';
+    document.body.style.color = '';
+  }
 }
 
+function toggleLanguage(lang) {
+  language.value = lang;
+}
+
+const getStatusTooltip = computed(() => {
+  if (isConnected.value) {
+    return language.value === 'zh-CN' ? '服务器连接成功' : 'Connected to server';
+  } else {
+    return language.value === 'zh-CN' ? '服务器断开连接' : 'Disconnected from server';
+  }
+});
+
 let onChange = (change) => {
-  console.debug('change:', change);
-  if (!isUpdatingText && socket != null) {
+  if (!enableOnChange) {
+    return;
+  }
+
+  console.info('change:', change);
+  if (change.trim() !== '' && socket != null) {
     socket.send(change);
   }
 };
-
-const temporaryOnChange = onChange;
-
-function updateTextWithoutOnChange(newText) {
-  onChange = () => {};
-  updateText(newText);
-  onChange = temporaryOnChange;
-}
 
 onMounted(() => {
   document.title = 'Collaborative Editor';
@@ -210,14 +199,16 @@ onMounted(() => {
 
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
-    console.debug('message:', message);
+    console.info('message:', message);
     if (message.type === 1) {
       online.value = message.message;
     } else if (message.type === 2) {
-      let preCursorPos = getCursorPos();
+      enableOnChange = false;
+
+      let preCursorPos = getCursorPos(text.value);
       let preText = text.value;
 
-      updateTextWithoutOnChange(message.message);
+      text.value = message.message;
 
       if (preText.length === 0) {
         preCursorPos = message.message.length;
@@ -225,11 +216,13 @@ onMounted(() => {
 
       preCursorPos = updateCursorPosition(preText, message.message, preCursorPos);
       nextTick(() => {
-        console.debug('Configuring cursor position:', preCursorPos);
+        console.info('Configuring cursor position:', preCursorPos);
         const option = {
           cursorPos: preCursorPos,
         };
         editorRef.value?.focus(option);
+
+        enableOnChange = true;
       });
     }
   });
@@ -241,5 +234,5 @@ onMounted(() => {
   socket.addEventListener('close', () => {
     isConnected.value = false;
   });
-})
+});
 </script>
