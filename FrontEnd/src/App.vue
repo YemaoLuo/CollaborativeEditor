@@ -72,13 +72,6 @@ const getStatusTooltip = computed(() => {
   }
 });
 
-const onChange = (change) => {
-  console.debug('change:', change);
-  if (!isUpdatingText && socket != null) {
-    socket.send(change);
-  }
-};
-
 function getCursorPositionInDivElement(divElement) {
   const selection = window.getSelection();
   const anchorNode = selection.anchorNode;
@@ -188,11 +181,26 @@ function findAddedTextPositions(oldText, newText) {
 }
 
 function updateText(newText) {
-  isUpdatingText = true; // 设置标志位为true，表示正在更新文本
+  isUpdatingText = true;
   text.value = newText;
   nextTick(() => {
-    isUpdatingText = false; // 更新完成后将标志位设为false
+    isUpdatingText = false;
   });
+}
+
+let onChange = (change) => {
+  console.debug('change:', change);
+  if (!isUpdatingText && socket != null) {
+    socket.send(change);
+  }
+};
+
+const temporaryOnChange = onChange;
+
+function updateTextWithoutOnChange(newText) {
+  onChange = () => {};
+  updateText(newText);
+  onChange = temporaryOnChange;
 }
 
 onMounted(() => {
@@ -209,7 +217,7 @@ onMounted(() => {
       let preCursorPos = getCursorPos();
       let preText = text.value;
 
-      updateText(message.message);
+      updateTextWithoutOnChange(message.message);
 
       if (preText.length === 0) {
         preCursorPos = message.message.length;
