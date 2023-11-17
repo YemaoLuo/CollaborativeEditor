@@ -600,18 +600,6 @@
   "resolved" "https://registry.npmmirror.com/fsevents/-/fsevents-2.3.3.tgz"
   "version" "2.3.3"
 
-"isomorphic.js@^0.2.4":
-  "integrity" "sha512-PIeMbHqMt4DnUP3MA/Flc0HElYjMXArsw1qwJZcm9sqR8mq3l8NYizFMty0pWwE/tzIGH3EKK5+jes5mAr85yw=="
-  "resolved" "https://registry.npmmirror.com/isomorphic.js/-/isomorphic.js-0.2.5.tgz"
-  "version" "0.2.5"
-
-"lib0@^0.2.74":
-  "integrity" "sha512-TbB63XJixvNToW2IHWAFsCJj9tVnajmwjE14p69i51Rx8byOQd2IP4ourE8v4d7vhyO++nVm1sQk3ePslfbucg=="
-  "resolved" "https://registry.npmmirror.com/lib0/-/lib0-0.2.87.tgz"
-  "version" "0.2.87"
-  dependencies:
-    "isomorphic.js" "^0.2.4"
-
 "linkify-it@^4.0.1":
   "integrity" "sha512-C7bfi1UZmoj8+PQx22XyeXCuBlokoyWQL5pWSP+EI6nzRylyThouddufc2c1NDIcP9k5agmN9fLpA7VNJfIiqw=="
   "resolved" "https://registry.npmjs.org/linkify-it/-/linkify-it-4.0.1.tgz"
@@ -757,10 +745,3 @@
   "integrity" "sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ=="
   "resolved" "https://registry.npmjs.org/w3c-keyname/-/w3c-keyname-2.2.8.tgz"
   "version" "2.2.8"
-
-"yjs@^13.6.8":
-  "integrity" "sha512-ZPq0hpJQb6f59B++Ngg4cKexDJTvfOgeiv0sBc4sUm8CaBWH7OQC4kcCgrqbjJ/B2+6vO49exvTmYfdlPtcjbg=="
-  "resolved" "https://registry.npmmirror.com/yjs/-/yjs-13.6.8.tgz"
-  "version" "13.6.8"
-  dependencies:
-    "lib0" "^0.2.74"

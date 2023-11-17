@@ -17,14 +17,16 @@ import java.util.Set;
 @Slf4j
 public class CollaborativeHandler {
 
-    private static final Set<Session> sessions = Collections.synchronizedSet(new HashSet<>());
+    private static final Set<Session> sessions = new HashSet<>();
     private static String sharedText = "Hello Editor!";
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @OnOpen
     @SneakyThrows
     public void onOpen(Session session) {
-        sessions.add(session);
+        synchronized (sessions) {
+            sessions.add(session);
+        }
         synchronized (sharedText) {
             Message message = new Message(2, sharedText);
             session.getBasicRemote().sendText(mapper.writeValueAsString(message));
@@ -39,7 +41,9 @@ public class CollaborativeHandler {
     @SneakyThrows
     public void onClose(Session session) {
         session.close();
-        sessions.remove(session);
+        synchronized (sessions) {
+            sessions.remove(session);
+        }
         log.info("Session closed: " + session.getId());
         log.info("Number of sessions: " + sessions.size());
         Message message = new Message(1, String.valueOf(sessions.size()));
@@ -61,15 +65,19 @@ public class CollaborativeHandler {
     @SneakyThrows
     public void onError(Session session, Throwable throwable) {
         log.error("Error occurred: " + throwable.getMessage());
-        sessions.remove(session);
+        synchronized (sessions) {
+            sessions.remove(session);
+        }
         session.close();
     }
 
     @SneakyThrows
     public static void sendAllMessage(String message) {
         log.info("Send Message: " + message);
-        for (Session webSocket : sessions) {
-            webSocket.getBasicRemote().sendText(message);
+        synchronized (sessions) {
+            for (Session webSocket : sessions) {
+                webSocket.getBasicRemote().sendText(message);
+            }
         }
     }
 }

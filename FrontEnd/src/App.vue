@@ -36,11 +36,11 @@ let online = ref('1');
 const exclude = ref(['github', 'save']);
 const editorRef = ref<ExposeParam>();
 
-let socket;
+let socket = null;
 let socketURL = 'ws://';
 socketURL += window.location.host;
 socketURL += '/CollaborativeHandler';
-console.log('socketURL:', socketURL);
+console.debug('socketURL:', socketURL);
 
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
@@ -51,8 +51,10 @@ function toggleLanguage(lang) {
 }
 
 const onChange = (change) => {
-  console.log('change:', change);
-  socket.send(change);
+  console.debug('change:', change);
+  if (socket != null) {
+    socket.send(change);
+  }
 };
 
 function getCursorPositionInDivElement(divElement) {
@@ -108,6 +110,59 @@ function getCursorPos() {
   return count + position;
 }
 
+function updateCursorPosition(oldText, newText, cursorPosition) {
+  if (newText.length > oldText.length) {
+    let addPos = findAddedTextPositions(oldText, newText);
+    let start = addPos[0];
+    let end = addPos[1];
+    if (end < cursorPosition) {
+      return Math.min(cursorPosition + end - start, newText.length - 1);
+    } else {
+      return cursorPosition;
+    }
+  }else if (newText.length < oldText.length) {
+    let delPos = findDeletedTextPositions(oldText, newText);
+    let start = delPos[0];
+    let end = delPos[1];
+    console.debug('start:', start, 'end:', end, 'cursorPosition:', cursorPosition);
+    if (start >= cursorPosition) {
+      return Math.min(cursorPosition, newText.length);
+    }else if (end < cursorPosition){
+      return Math.max(cursorPosition - (end - start + 1), 0);
+    }
+  }else {
+    return cursorPosition;
+  }
+}
+
+function findDeletedTextPositions(oldText, newText) {
+  let deletedPositions = [oldText.length];
+
+  for (let i = 0; i < newText.length; i++) {
+    if (oldText[i] !== newText[i]) {
+      deletedPositions[0] = i;
+      break;
+    }
+  }
+  deletedPositions[1] = deletedPositions[0] + oldText.length - newText.length - 1;
+
+  return deletedPositions;
+}
+
+function findAddedTextPositions(oldText, newText) {
+  let addedPositions = [];
+
+  for (let i = 0; i < oldText.length; i++) {
+    if (oldText[i] !== newText[i]) {
+      addedPositions[0] = i;
+      break;
+    }
+  }
+  addedPositions[1] = addedPositions[0] + newText.length - oldText.length;
+
+  return addedPositions;
+}
+
 onMounted(() => {
   document.title = 'Collaborative Editor';
 
@@ -115,10 +170,13 @@ onMounted(() => {
 
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
-    console.log('message:', message);
+    console.debug('message:', message);
     if (message.type === 1) {
       online.value = message.message;
     } else if (message.type === 2) {
+      if (message.message === text.value) {
+        return;
+      }
       let preCursorPos = getCursorPos();
       let preText = text.value;
 
@@ -128,8 +186,9 @@ onMounted(() => {
         preCursorPos = message.message.length;
       }
 
+      preCursorPos = updateCursorPosition(preText, message.message, preCursorPos);
       nextTick(() => {
-        console.log('Configuring cursor position:', preCursorPos);
+        console.debug('Configuring cursor position:', preCursorPos);
         const option = {
           cursorPos: preCursorPos,
         };
