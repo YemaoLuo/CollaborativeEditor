@@ -8,7 +8,6 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -40,10 +39,10 @@ public class CollaborativeHandler {
     @OnClose
     @SneakyThrows
     public void onClose(Session session) {
-        session.close();
         synchronized (sessions) {
             sessions.remove(session);
         }
+        session.close();
         log.info("Session closed: " + session.getId());
         log.info("Number of sessions: " + sessions.size());
         Message message = new Message(1, String.valueOf(sessions.size()));
