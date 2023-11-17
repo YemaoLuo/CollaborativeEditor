@@ -28,7 +28,7 @@ public class CollaborativeHandler {
         log.info("New session opened: " + session.getId());
         log.info("Number of sessions: " + sessions.size());
         Message sessionCountMessage = new Message(1, String.valueOf(sessions.size()));
-        sendAllMessage(mapper.writeValueAsString(sessionCountMessage));
+        sendAllMessage(null, mapper.writeValueAsString(sessionCountMessage));
     }
 
     @OnClose
@@ -39,16 +39,16 @@ public class CollaborativeHandler {
         log.info("Session closed: " + session.getId());
         log.info("Number of sessions: " + sessions.size());
         Message sessionCountMessage = new Message(1, String.valueOf(sessions.size()));
-        sendAllMessage(mapper.writeValueAsString(sessionCountMessage));
+        sendAllMessage(null, mapper.writeValueAsString(sessionCountMessage));
     }
 
     @OnMessage
     @SneakyThrows
-    public void onMessage(String receivedMessage) {
+    public void onMessage(Session session, String receivedMessage) {
         log.info("Message received: " + receivedMessage);
         sharedText = receivedMessage;
         Message message = new Message(2, sharedText);
-        sendAllMessage(mapper.writeValueAsString(message));
+        sendAllMessage(session, mapper.writeValueAsString(message));
     }
 
     @OnError
@@ -60,9 +60,12 @@ public class CollaborativeHandler {
     }
 
     @SneakyThrows
-    public static void sendAllMessage(String message) {
+    public static void sendAllMessage(Session session, String message) {
         log.info("Send Message: " + message);
         for (Session webSocket : sessions) {
+            if (session != null && session.getId().equals(webSocket.getId())) {
+                continue;
+            }
             webSocket.getBasicRemote().sendText(message);
         }
     }
