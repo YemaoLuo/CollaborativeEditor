@@ -21,7 +21,7 @@
     <div class="online">
       Online: {{ online }}
     </div>
-    <MdEditor v-model="text" :theme="theme" :language="language" :toolbars-exclude='exclude'
+    <MdEditor v-model="text" :theme="theme" :language="language" :toolbars-exclude='exclude' no-upload-img
               @on-change="onChange"
               ref="editorRef"/>
   </div>
@@ -38,6 +38,7 @@ let theme = ref('light');
 let language = ref('en-US');
 let text = ref('')
 let online = ref('0');
+let isUpdatingText = false;
 const exclude = ref(['github', 'save']);
 const editorRef = ref<ExposeParam>();
 
@@ -73,7 +74,7 @@ const getStatusTooltip = computed(() => {
 
 const onChange = (change) => {
   console.debug('change:', change);
-  if (socket != null) {
+  if (!isUpdatingText && socket != null) {
     socket.send(change);
   }
 };
@@ -186,6 +187,14 @@ function findAddedTextPositions(oldText, newText) {
   return addedPositions;
 }
 
+function updateText(newText) {
+  isUpdatingText = true; // 设置标志位为true，表示正在更新文本
+  text.value = newText;
+  nextTick(() => {
+    isUpdatingText = false; // 更新完成后将标志位设为false
+  });
+}
+
 onMounted(() => {
   document.title = 'Collaborative Editor';
 
@@ -197,13 +206,10 @@ onMounted(() => {
     if (message.type === 1) {
       online.value = message.message;
     } else if (message.type === 2) {
-      if (message.message === text.value) {
-        return;
-      }
       let preCursorPos = getCursorPos();
       let preText = text.value;
 
-      text.value = message.message;
+      updateText(message.message);
 
       if (preText.length === 0) {
         preCursorPos = message.message.length;
