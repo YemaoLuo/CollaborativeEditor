@@ -44,6 +44,13 @@ console.debug('socketURL:', socketURL);
 
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
+  if (theme.value === 'dark') {
+    document.body.style.backgroundColor = 'black';
+    document.body.style.color = 'white';
+  } else {
+    document.body.style.backgroundColor = '';
+    document.body.style.color = '';
+  }
 }
 
 function toggleLanguage(lang) {
