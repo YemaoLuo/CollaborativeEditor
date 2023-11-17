@@ -1,16 +1,14 @@
 <template>
   <div class="container">
     <h1 class="topic">
-      {{ language === 'zh-CN' ? '在线协作Markdown编辑器' : 'Collaborative Editor for Markdown' }}
+      {{ language === 'zh-CN' ? '在线协作Markdown编辑器' : 'Collaborative Markdown Editor' }}
     </h1>
     <div class="button-group">
       <button class="theme-button" :class="{ dark: theme === 'dark' }" @click="toggleTheme">
-        {{ theme === 'light' ? 'Dark Theme' : 'Light Theme' }}
+        {{ theme === 'light' ? 'Dark' : 'Light' }}
       </button>
-      <button class="language-button" :class="{ active: language === 'zh-CN' }" @click="toggleLanguage('zh-CN')">中文
-      </button>
-      <button class="language-button" :class="{ active: language === 'en-US' }" @click="toggleLanguage('en-US')">
-        English
+      <button class="language-button" :class="{ active: language === 'zh-CN' }" @click="toggleLanguage(language)">
+        {{ language === 'zh-CN' ? 'English' : '中文' }}
       </button>
     </div>
     <div class="status-container">
@@ -170,7 +168,11 @@ function toggleTheme() {
 }
 
 function toggleLanguage(lang) {
-  language.value = lang;
+  if (lang === 'en-US') {
+    language.value = 'zh-CN';
+  } else {
+    language.value = 'en-US';
+  }
 }
 
 const getStatusTooltip = computed(() => {
