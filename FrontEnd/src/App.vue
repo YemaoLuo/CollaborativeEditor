@@ -13,6 +13,11 @@
         English
       </button>
     </div>
+    <div class="status-container">
+      <div class="status-dot"
+           :class="{ 'green-dot': isConnected, 'red-dot': !isConnected }"></div>
+      <div class="status-tooltip">{{ getStatusTooltip }}</div>
+    </div>
     <div class="online">
       Online: {{ online }}
     </div>
@@ -23,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import {nextTick, onMounted, ref} from 'vue';
+import {computed, nextTick, onMounted, ref} from 'vue';
 import type {ExposeParam} from 'md-editor-v3';
 import {MdEditor} from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
@@ -32,12 +37,13 @@ import '@/App.css';
 let theme = ref('light');
 let language = ref('en-US');
 let text = ref('')
-let online = ref('1');
+let online = ref('0');
 const exclude = ref(['github', 'save']);
 const editorRef = ref<ExposeParam>();
 
 let socket = null;
 let socketURL = 'ws://';
+let isConnected = ref(false);
 socketURL += window.location.host;
 socketURL += '/CollaborativeHandler';
 console.debug('socketURL:', socketURL);
@@ -56,6 +62,14 @@ function toggleTheme() {
 function toggleLanguage(lang) {
   language.value = lang;
 }
+
+const getStatusTooltip = computed(() => {
+  if (isConnected.value) {
+    return language.value === 'zh-CN' ? '服务器连接成功' : 'Connected to server';
+  } else {
+    return language.value === 'zh-CN' ? '服务器断开连接' : 'Disconnected from server';
+  }
+});
 
 const onChange = (change) => {
   console.debug('change:', change);
@@ -136,6 +150,8 @@ function updateCursorPosition(oldText, newText, cursorPosition) {
       return Math.min(cursorPosition, newText.length);
     }else if (end < cursorPosition){
       return Math.max(cursorPosition - (end - start + 1), 0);
+    } else {
+      return Math.max(0, start);
     }
   }else {
     return cursorPosition;
@@ -202,6 +218,14 @@ onMounted(() => {
         editorRef.value?.focus(option);
       });
     }
+  });
+
+  socket.addEventListener('open', () => {
+    isConnected.value = true;
+  });
+
+  socket.addEventListener('close', () => {
+    isConnected.value = false;
   });
 })
 </script>
