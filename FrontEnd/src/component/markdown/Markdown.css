@@ -72,22 +72,6 @@
     margin-bottom: 10px;
 }
 
-.status-tooltip {
-    width: 100%;
-    height: 20px;
-    display: none;
-    font-size: 15px;
-    margin-bottom: 10px;
-}
-
-.status-container:hover .status-dot {
-    display: none;
-}
-
-.status-container:hover .status-tooltip {
-    display: block;
-}
-
 .status-container {
     display: flex;
     align-items: center;

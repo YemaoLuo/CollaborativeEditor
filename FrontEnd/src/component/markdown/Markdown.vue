@@ -10,11 +10,13 @@
       <button class="language-button" :class="{ active: language === 'zh-CN' }" @click="toggleLanguage(language)">
         {{ language === 'zh-CN' ? 'English' : '中文' }}
       </button>
+      <button class="language-button" onclick="window.location.href = '/';">
+        {{ language === 'zh-CN' ? 'Back' : '返回' }}
+      </button>
     </div>
     <div class="status-container">
       <div class="status-dot"
            :class="{ 'green-dot': isConnected, 'red-dot': !isConnected }"></div>
-      <div class="status-tooltip">{{ getStatusTooltip }}</div>
     </div>
     <div class="online">
       Online: {{ online }}
@@ -171,14 +173,6 @@ function toggleLanguage(lang) {
   }
 }
 
-const getStatusTooltip = computed(() => {
-  if (isConnected.value) {
-    return language.value === 'zh-CN' ? '服务器连接成功' : 'Connected to server';
-  } else {
-    return language.value === 'zh-CN' ? '服务器断开连接' : 'Disconnected from server';
-  }
-});
-
 let onChange = (change) => {
   if (!enableOnChange) {
     return;
@@ -193,7 +187,7 @@ let onChange = (change) => {
 export default {
   components: {MdEditor},
   methods: {toggleTheme, toggleLanguage, onChange},
-  data: () => ({theme, language, text, online, exclude, editorRef, getStatusTooltip, isConnected}),
+  data: () => ({theme, language, text, online, exclude, editorRef, isConnected}),
   created() {
   document.title = 'Collaborative Editor';
 
