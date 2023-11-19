@@ -85,7 +85,7 @@
 }
 
 .status-container:hover .status-tooltip {
-    display: block; /* 鼠标悬停时显示提示文本 */
+    display: block;
 }
 
 .status-container {
