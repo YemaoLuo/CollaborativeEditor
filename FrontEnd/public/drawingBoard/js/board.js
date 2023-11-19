@@ -14,7 +14,9 @@ let penColorSelected = document.querySelector('.penColor')
 let penColorHidden = document.getElementById('penColor-hidden')
 let timer = null
 let save = document.getElementById('save')
+let dot = document.getElementById('dot');
 
+let socket = null;
 const urlParams = new URLSearchParams(window.location.search);
 let socketURL = 'ws://';
 const id = urlParams.get('id');
@@ -22,10 +24,9 @@ if (id === null) {
     alert("Please enter a valid id.")
 }
 console.log("onload id=" + id);
-const url = "ws://" + window.location.host + "/updateDrawing/" + id
+const url = "ws://" + window.location.host + "/DrawingHandler/" + id
 console.log("websocket url:" + url);
-const socket = new WebSocket(url);
-
+socket = new WebSocket(url);
 
 pen.classList.add('active');
 ctx.willReadFrequently = true;
@@ -182,13 +183,17 @@ function pcDrawLine() {
                 'id': uuid,
                 'data': url.substring(i, i + 100)
             }
-            socket.send(JSON.stringify(message).toString());
+            if (socket != null) {
+                socket.send(JSON.stringify(message).toString());
+            }
         }
         const message = {
             'id': uuid,
             'data': "END"
         }
-        socket.send(JSON.stringify(message).toString());
+        if (socket != null) {
+            socket.send(JSON.stringify(message).toString());
+        }
     }
 
     canvas.onmouseleave = function (e) {
@@ -247,20 +252,26 @@ socket.onopen = function (event) {
 };
 
 socket.onmessage = function (event) {
-    const message = event.data;
+    let message = event.data;
+    let decompressedData;
     const reader = new FileReader();
 
     reader.onload = function (event) {
         const arrayBuffer = event.target.result;
         const uint8Array = new Uint8Array(arrayBuffer);
 
-        const decompressedData = pako.inflate(uint8Array, {to: 'string'});
-        console.log("Received message decompressed:", decompressedData);
-        const newImage = new Image();
-        newImage.src = decompressedData;
-        newImage.onload = function () {
-            ctx.drawImage(newImage, 0, 0);
-        };
+        decompressedData = pako.inflate(uint8Array, {to: 'string'});
+        console.log("Received message decompressed:", decompressedData.length);
+        message = JSON.parse(decompressedData);
+        if (message.type === 1) {
+            dot.innerText = message.message;
+        } else {
+            const newImage = new Image();
+            newImage.src = message.message;
+            newImage.onload = function () {
+                ctx.drawImage(newImage, 0, 0);
+            };
+        }
     };
 
     reader.readAsArrayBuffer(event.data);
@@ -268,8 +279,12 @@ socket.onmessage = function (event) {
 
 socket.onclose = function (event) {
     console.log("WebSocket connection closed.");
+    dot.style.backgroundColor = 'red';
+    dot.style.color = 'red';
 };
 
 socket.onerror = function (error) {
     console.error("WebSocket error:", error);
+    dot.style.backgroundColor = 'red';
+    dot.style.color = 'red';
 };

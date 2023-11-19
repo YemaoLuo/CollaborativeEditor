@@ -28,7 +28,7 @@
 </template>
 
 <script lang="ts">
-import {computed, nextTick, ref} from 'vue';
+import {nextTick, ref} from 'vue';
 import type {ExposeParam} from 'md-editor-v3';
 import {MdEditor} from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
@@ -189,13 +189,12 @@ export default {
   methods: {toggleTheme, toggleLanguage, onChange},
   data: () => ({theme, language, text, online, exclude, editorRef, isConnected}),
   created() {
-  document.title = 'Collaborative Editor';
+    document.title = 'Markdown Editor';
 
   const urlParams = new URLSearchParams(window.location.search);
   let socketURL = 'ws://';
-  let isConnected = ref(false);
   socketURL += window.location.host;
-  socketURL += '/MDEditor/';
+    socketURL += '/MDHandler/';
   const id = urlParams.get('id');
   if (id == null) {
     alert('Please enter a valid id.');

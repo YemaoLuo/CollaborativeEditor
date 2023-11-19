@@ -29,11 +29,10 @@ public class MDHandler {
         sessions.computeIfAbsent(id, k -> new HashSet<>()).add(session);
         Message message = new Message(2, sharedTextMap.getOrDefault(id, ""));
         session.getBasicRemote().sendText(mapper.writeValueAsString(message));
-        log.info("New session opened: " + session.getId());
         log.info("Number of sessions for ID {}: {}", id, sessions.get(id).size());
         log.info("Total number of sessions: {}", getTotalNumberOfSessions());
         Message sessionCountMessage = new Message(1, String.valueOf(getTotalNumberOfSessions()));
-        sendAllMessage(null, mapper.writeValueAsString(sessionCountMessage), id);
+        sendAllMessage(mapper.writeValueAsString(sessionCountMessage), id, null);
     }
 
     @OnClose
@@ -47,20 +46,19 @@ public class MDHandler {
             }
         }
         session.close();
-        log.info("Session closed: " + session.getId());
         log.info("Number of sessions for ID {}: {}", id, sessions.get(id) == null ? 0 : sessions.get(id).size());
         log.info("Total number of sessions: {}", getTotalNumberOfSessions());
         Message sessionCountMessage = new Message(1, String.valueOf(getTotalNumberOfSessions()));
-        sendAllMessage(null, mapper.writeValueAsString(sessionCountMessage), id);
+        sendAllMessage(mapper.writeValueAsString(sessionCountMessage), id, session);
     }
 
     @OnMessage
     @SneakyThrows
     public void onMessage(Session session, String receivedMessage, @PathParam("id") String id) {
-        log.info("Message received: " + receivedMessage);
+        log.info("Message received: " + receivedMessage.length());
         sharedTextMap.put(id, receivedMessage);
         Message message = new Message(2, sharedTextMap.getOrDefault(id, ""));
-        sendAllMessage(session, mapper.writeValueAsString(message), id);
+        sendAllMessage(mapper.writeValueAsString(message), id, session);
     }
 
     @OnError
@@ -78,7 +76,7 @@ public class MDHandler {
     }
 
     @SneakyThrows
-    public static void sendAllMessage(Session session, String message, String id) {
+    public static void sendAllMessage(String message, String id, Session session) {
         log.info("Sending message with length {} to {} sessions", message.length(), sessions.get(id) == null ? 0 : sessions.get(id).size());
         Set<Session> sessionList = sessions.get(id);
         if (sessionList != null) {

@@ -1,5 +1,6 @@
 package com.cpb.backend.handler;
 
+import com.cpb.backend.entity.Message;
 import com.cpb.backend.util.GzipUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.websocket.*;
@@ -9,7 +10,6 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -26,7 +26,8 @@ public class DrawingHandler {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @OnOpen
-    public void onOpen(Session session, @PathParam("id") String id) throws IOException {
+    @SneakyThrows
+    public void onOpen(Session session, @PathParam("id") String id) {
         if (sessions.containsKey(id)) {
             sessions.get(id).add(session);
         } else {
@@ -35,27 +36,41 @@ public class DrawingHandler {
             sessions.put(id, set);
         }
         log.info("onOpen " + id + "：{}", sessions.get(id).size());
+        log.info("total: {}", getTotalNumberOfSessions());
         if (history.containsKey(id)) {
-            session.getBasicRemote().sendText(history.get(id));
+            Message message = new Message(2, history.get(id));
+            session.getBasicRemote().sendObject(GzipUtils.compressString(mapper.writeValueAsString(message)));
         }
+        sendAllMessage(mapper.writeValueAsString(new Message(1, String.valueOf(sessions.get(id).size()))), id, null);
     }
 
     @OnClose
+    @SneakyThrows
     public void onClose(Session session, @PathParam("id") String id) {
         sessions.get(id).remove(session);
-        log.info("onClose " + id + "：{}", sessions.get(id).size());
+        if (sessions.get(id).isEmpty()) {
+            sessions.remove(id);
+        }
+        log.info("onClose " + id + "：{}", sessions.get(id) == null ? 0 : sessions.get(id).size());
+        log.info("total: {}", getTotalNumberOfSessions());
+        if (sessions.get(id) != null) {
+            Message message = new Message(1, String.valueOf(sessions.get(id).size()));
+            sendAllMessage(mapper.writeValueAsString(message), id, session);
+        }
     }
 
     @OnMessage
     @SneakyThrows
-    public void onMessage(String message, @PathParam("id") String id) {
+    public void onMessage(Session session, String message, @PathParam("id") String id) {
+        log.info("Message received: " + message.length());
         Map map = mapper.readValue(message, Map.class);
         String key = (String) map.get("id");
         String value = (String) map.get("data");
         if (value.equals("END")) {
             ConcurrentHashMap<String, String> map1 = dataMap.get(id);
             history.put(id, map1.get(key));
-            sendAllMessage(map1.get(key), id);
+            Message message1 = new Message(2, map1.get(key));
+            sendAllMessage(mapper.writeValueAsString(message1), id, session);
             map1.remove(key);
         } else {
             if (dataMap.containsKey(id)) {
@@ -89,10 +104,13 @@ public class DrawingHandler {
         session.close();
     }
 
-    public static void sendAllMessage(String message, String id) {
-        log.info("Send Message " + id);
+    public static void sendAllMessage(String message, String id, Session session) {
+        log.info("Sending message with length {} to {} sessions", message.length(), sessions.get(id) == null ? 0 : sessions.get(id).size());
         Set<Session> sessionSet = sessions.get(id);
         for (Session webSocket : sessionSet) {
+            if (webSocket.equals(session)) {
+                continue;
+            }
             try {
                 byte[] compressed = GzipUtils.compressString(message);
                 webSocket.getBasicRemote().sendObject(compressed);
@@ -100,5 +118,13 @@ public class DrawingHandler {
                 sessionSet.remove(webSocket);
             }
         }
+    }
+
+    private static int getTotalNumberOfSessions() {
+        int total = 0;
+        for (Set<Session> sessionList : sessions.values()) {
+            total += sessionList.size();
+        }
+        return total;
     }
 }

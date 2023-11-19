@@ -1,7 +1,23 @@
-
 body, div, canvas, body, html, ul, li {
     margin: 0;
     padding: 0;
+}
+
+.status-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: green;
+    color: green;
+    font-size: 30px;
+    text-align: center;
+}
+
+.status-dot:hover {
+    background-color: white;
+    color: black;
 }
 
 body {
