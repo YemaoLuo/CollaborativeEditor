@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Drawing Board</title>
+    <link rel="stylesheet" type="text/css" href="/drawingBoard/css/board.css"/>
+</head>
+<body>
+<canvas id="drawing-board" width="" height=""></canvas>
+<div class="main">
+    <div id="dot" class="status-dot">0</div>
+    <div class="penColor" title="Color">
+        <div id="penColor-hidden" style="display: none;">
+            <div class="penColorItem" title="Black">
+                <div></div>
+            </div>
+            <div class="penColorItem" title="Red">
+                <div></div>
+            </div>
+            <div class="penColorItem" title="Blue">
+                <div></div>
+            </div>
+            <div class="penColorItem" title="Yellow">
+                <div></div>
+            </div>
+            <div class="penColorItem" title="Green">
+                <div></div>
+            </div>
+            <div class="penColorItem" title="Gray">
+                <div></div>
+            </div>
+        </div>
+    </div>
+    <div class="penSize" id='shape-lineWidth' title="Line Width">
+        <div></div>
+        <div></div>
+        <div></div>
+        <div id="lineWidth-hidden" style="display: none;">
+            <div class="box-hover">
+                <div></div>
+            </div>
+            <div class="box-hover">
+                <div></div>
+            </div>
+            <div class="box-hover">
+                <div></div>
+            </div>
+            <div class="box-hover">
+                <div></div>
+            </div>
+            <div class="box-hover" style="font-size: 5px;"><input type="range" id="inputLineWidth" min="1"
+                                                                  max="30"/><span>1-30px</span></div>
+        </div>
+    </div>
+    <div class="toolsItem" id="pen" title="Pen"></div>
+    <div class="toolsItem" id="eraser" title="Eraser"></div>
+    <div class="toolsItem" id="save" title="Save"></div>
+</div>
+<script src="/drawingBoard/js/pako.min.js"></script>
+<script src="/drawingBoard/js/board.js"></script>
+</body>
+</html>
