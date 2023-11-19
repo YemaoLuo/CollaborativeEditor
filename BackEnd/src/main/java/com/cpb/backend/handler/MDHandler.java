@@ -9,24 +9,25 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@ServerEndpoint("/CollaborativeHandler/{id}")
+@ServerEndpoint("/MDHandler/{id}")
 @Component
 @Slf4j
-public class CollaborativeHandler {
+public class MDHandler {
 
-    private static final Map<String, List<Session>> sessions = new ConcurrentHashMap<>();
+    private static final Map<String, Set<Session>> sessions = new ConcurrentHashMap<>();
     private static final Map<String, String> sharedTextMap = new ConcurrentHashMap<>();
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @OnOpen
     @SneakyThrows
     public void onOpen(Session session, @PathParam("id") String id) {
-        sessions.computeIfAbsent(id, k -> new ArrayList<>()).add(session);
+        sessions.computeIfAbsent(id, k -> new HashSet<>()).add(session);
         Message message = new Message(2, sharedTextMap.getOrDefault(id, ""));
         session.getBasicRemote().sendText(mapper.writeValueAsString(message));
         log.info("New session opened: " + session.getId());
@@ -67,7 +68,7 @@ public class CollaborativeHandler {
     @SneakyThrows
     public void onError(Session session, Throwable throwable, @PathParam("id") String id) {
         log.error("Error occurred: " + throwable.getMessage());
-        List<Session> sessionList = sessions.get(id);
+        Set<Session> sessionList = sessions.get(id);
         if (sessionList != null) {
             sessionList.remove(session);
             if (sessionList.isEmpty()) {
@@ -80,7 +81,7 @@ public class CollaborativeHandler {
     @SneakyThrows
     public static void sendAllMessage(Session session, String message, String id) {
         log.info("Sending message with length {} to {} sessions", message.length(), sessions.get(id) == null ? 0 : sessions.get(id).size());
-        List<Session> sessionList = sessions.get(id);
+        Set<Session> sessionList = sessions.get(id);
         if (sessionList != null) {
             for (Session webSocket : sessionList) {
                 if (session != null && session.getId().equals(webSocket.getId())) {
@@ -93,7 +94,7 @@ public class CollaborativeHandler {
 
     private static int getTotalNumberOfSessions() {
         int total = 0;
-        for (List<Session> sessionList : sessions.values()) {
+        for (Set<Session> sessionList : sessions.values()) {
             total += sessionList.size();
         }
         return total;
