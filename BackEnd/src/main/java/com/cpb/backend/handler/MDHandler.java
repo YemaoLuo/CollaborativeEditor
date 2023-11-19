@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,7 +39,7 @@ public class MDHandler {
     @OnClose
     @SneakyThrows
     public void onClose(Session session, @PathParam("id") String id) {
-        List<Session> sessionList = sessions.get(id);
+        Set<Session> sessionList = sessions.get(id);
         if (sessionList != null) {
             sessionList.remove(session);
             if (sessionList.isEmpty()) {
