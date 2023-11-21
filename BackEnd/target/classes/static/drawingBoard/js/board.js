@@ -253,7 +253,7 @@ socket.onmessage = function (event) {
         reader.onload = function (event) {
             const arrayBuffer = event.target.result;
             const uint8Array = new Uint8Array(arrayBuffer);
-            const decompressedData = pako.inflate(uint8Array, { to: 'string' });
+            const decompressedData = pako.inflate(uint8Array, {to: 'string'});
             console.log("Received message decompressed:", decompressedData.length);
             const newImage = new Image();
             newImage.src = decompressedData;
