@@ -21,24 +21,32 @@
     <div class="online">
       Online: {{ online }}
     </div>
-    <MdEditor v-model="text" :theme="theme" :language="language" :toolbars-exclude='exclude' no-upload-img
-              @on-change="onChange"
-              ref="editorRef"/>
+    <MdEditor v-model="text" :theme="theme" :language="language" :toolbars="toolbars" no-upload-img
+              @on-change="onChange" @on-save="onSave"
+              ref="editorRef">
+      <template #defToolbars>
+        <Emoji/>
+        <ExportPDF :modelValue="text"/>
+      </template>
+    </MdEditor>
   </div>
 </template>
 
-<script lang="ts">
-import {nextTick, ref} from 'vue';
+<script setup lang="ts">
+import {nextTick, onMounted, ref} from 'vue';
 import type {ExposeParam} from 'md-editor-v3';
 import {MdEditor} from 'md-editor-v3';
+import {Emoji, ExportPDF} from '@vavt/v3-extension';
+import '@vavt/v3-extension/lib/asset/style.css';
+import {toolbars} from './staticConfig';
+
 import 'md-editor-v3/lib/style.css';
-import '@/component/markdown/Markdown.css';
+import './Markdown.css';
 
 let theme = ref('light');
 let language = ref('en-US');
 let text = ref('');
 let online = ref('0');
-const exclude = ref(['github', 'save']);
 const editorRef = ref<ExposeParam>();
 
 let socket = null;
@@ -173,28 +181,28 @@ function toggleLanguage(lang) {
   }
 }
 
+const onSave = () => {
+  console.info('onSave');
+};
+
 let onChange = (change) => {
   if (!enableOnChange) {
     return;
   }
 
   console.info('change:', change);
-  if (change.trim() !== '' && socket != null) {
+  if (change.trim() !== '' && online.value !== '0') {
     socket.send(change);
   }
 };
 
-export default {
-  components: {MdEditor},
-  methods: {toggleTheme, toggleLanguage, onChange},
-  data: () => ({theme, language, text, online, exclude, editorRef, isConnected}),
-  created() {
-    document.title = 'Markdown Editor';
+onMounted(() => {
+  document.title = 'Markdown Editor';
 
   const urlParams = new URLSearchParams(window.location.search);
   let socketURL = 'ws://';
   socketURL += window.location.host;
-    socketURL += '/MDHandler/';
+  socketURL += '/MDHandler/';
   const id = urlParams.get('id');
   if (id == null) {
     alert('Please enter a valid id.');
@@ -240,7 +248,11 @@ export default {
   socket.addEventListener('close', () => {
     isConnected.value = false;
   });
-},
+});
+</script>
+
+<script lang="ts">
+export default {
   name: 'Markdown'
 };
 </script>

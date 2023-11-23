@@ -29,7 +29,7 @@ public class MDHandler {
         sessions.computeIfAbsent(id, k -> new HashSet<>()).add(session);
         Message message = new Message(2, sharedTextMap.getOrDefault(id, ""));
         session.getBasicRemote().sendText(mapper.writeValueAsString(message));
-        log.info("Number of sessions for ID {}: {}", id, sessions.get(id).size());
+        log.info("Number of sessions for ID {}: {}", id, sessions.containsKey(id) ? sessions.get(id).size() : 0);
         log.info("Total number of sessions: {}", getTotalNumberOfSessions());
         Message sessionCountMessage = new Message(1, String.valueOf(getTotalNumberOfSessions()));
         sendAllMessage(mapper.writeValueAsString(sessionCountMessage), id, null);
@@ -46,7 +46,7 @@ public class MDHandler {
             }
         }
         session.close();
-        log.info("Number of sessions for ID {}: {}", id, sessions.get(id) == null ? 0 : sessions.get(id).size());
+        log.info("Number of sessions for ID {}: {}", id, sessions.containsKey(id) ? sessions.get(id).size() : 0);
         log.info("Total number of sessions: {}", getTotalNumberOfSessions());
         Message sessionCountMessage = new Message(1, String.valueOf(getTotalNumberOfSessions()));
         sendAllMessage(mapper.writeValueAsString(sessionCountMessage), id, session);
@@ -55,7 +55,7 @@ public class MDHandler {
     @OnMessage
     @SneakyThrows
     public void onMessage(Session session, String receivedMessage, @PathParam("id") String id) {
-        log.info("Message received: " + receivedMessage.length());
+        log.info("Message received from: " + session.getId());
         sharedTextMap.put(id, receivedMessage);
         Message message = new Message(2, sharedTextMap.getOrDefault(id, ""));
         sendAllMessage(mapper.writeValueAsString(message), id, session);
@@ -72,16 +72,15 @@ public class MDHandler {
                 sessions.remove(id);
             }
         }
-        session.close();
     }
 
     @SneakyThrows
     public static void sendAllMessage(String message, String id, Session session) {
-        log.info("Sending message with length {} to {} sessions", message.length(), sessions.get(id) == null ? 0 : sessions.get(id).size());
-        Set<Session> sessionList = sessions.get(id);
-        if (sessionList != null) {
-            for (Session webSocket : sessionList) {
-                if (session != null && session.getId().equals(webSocket.getId())) {
+        log.info("Sending message to {}", id);
+        Set<Session> sessionSet = sessions.get(id);
+        if (sessionSet != null) {
+            for (Session webSocket : sessionSet) {
+                if (webSocket.equals(session)) {
                     continue;
                 }
                 webSocket.getBasicRemote().sendText(message);

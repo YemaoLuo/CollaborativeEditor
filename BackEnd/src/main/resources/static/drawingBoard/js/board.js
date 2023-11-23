@@ -24,7 +24,8 @@ if (id === null) {
     alert("Please enter a valid id.")
 }
 console.log("onload id=" + id);
-const url = "ws://" + window.location.host + "/DrawingHandler/" + id
+// const url = "ws://" + window.location.host + "/DrawingHandler/" + id;
+const url = "ws://localhost:12345/DrawingHandler/" + id;
 console.log("websocket url:" + url);
 socket = new WebSocket(url);
 
@@ -176,23 +177,10 @@ function pcDrawLine() {
 
     canvas.onmouseup = function (e) {
         flag = false;
-        const url = canvas.toDataURL();
-        const uuid = getUuid();
-        for (let i = 0; i < url.length; i += 100) {
-            const message = {
-                'id': uuid,
-                'data': url.substring(i, i + 100)
-            }
-            if (socket != null) {
-                socket.send(JSON.stringify(message).toString());
-            }
-        }
-        const message = {
-            'id': uuid,
-            'data': "END"
-        }
+        const data = canvas.toDataURL();
+        const compressed = pako.deflate(data);
         if (socket != null) {
-            socket.send(JSON.stringify(message).toString());
+            socket.send(compressed);
         }
     }
 
@@ -250,31 +238,32 @@ save.onclick = function () {
 socket.onopen = function (event) {
     console.log("WebSocket connection opened.");
 };
-
 socket.onmessage = function (event) {
-    let message = event.data;
-    let decompressedData;
-    const reader = new FileReader();
+    const data = event.data;
 
-    reader.onload = function (event) {
-        const arrayBuffer = event.target.result;
-        const uint8Array = new Uint8Array(arrayBuffer);
-
-        decompressedData = pako.inflate(uint8Array, {to: 'string'});
-        console.log("Received message decompressed:", decompressedData.length);
-        message = JSON.parse(decompressedData);
+    if (typeof data === 'string') {
+        const message = JSON.parse(data);
+        console.log('Received message:', message);
         if (message.type === 1) {
             dot.innerText = message.message;
-        } else {
+        }
+    } else {
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            const arrayBuffer = event.target.result;
+            const uint8Array = new Uint8Array(arrayBuffer);
+            const decompressedData = pako.inflate(uint8Array, {to: 'string'});
+            console.log("Received message decompressed:", decompressedData.length);
             const newImage = new Image();
-            newImage.src = message.message;
+            newImage.src = decompressedData;
             newImage.onload = function () {
                 ctx.drawImage(newImage, 0, 0);
             };
-        }
-    };
+        };
 
-    reader.readAsArrayBuffer(event.data);
+        reader.readAsArrayBuffer(data);
+    }
 };
 
 socket.onclose = function (event) {
