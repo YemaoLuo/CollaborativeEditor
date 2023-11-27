@@ -1,4 +1,4 @@
 FROM openjdk:17
 EXPOSE 12345
-COPY target/BackEnd-2.1.jar /app/BackEnd.jar
+COPY target/BackEnd-3.0.jar /app/BackEnd.jar
 CMD ["nohup", "java", "-jar", "/app/BackEnd.jar", "&"]
