@@ -22,7 +22,7 @@
       Online: {{ online }}
     </div>
     <MdEditor v-model="text" :theme="theme" :language="language" :toolbars="toolbars" no-upload-img
-              @on-change="onChange" @on-save="onSave"
+              @on-change="onChange"
               ref="editorRef">
       <template #defToolbars>
         <Emoji/>
@@ -33,13 +33,13 @@
 </template>
 
 <script setup lang="ts">
-import {nextTick, onMounted, ref} from 'vue';
+import {onMounted, ref} from 'vue';
 import type {ExposeParam} from 'md-editor-v3';
 import {MdEditor} from 'md-editor-v3';
 import {Emoji, ExportPDF} from '@vavt/v3-extension';
-import '@vavt/v3-extension/lib/asset/style.css';
 import {toolbars} from './staticConfig';
 
+import '@vavt/v3-extension/lib/asset/style.css';
 import 'md-editor-v3/lib/style.css';
 import './Markdown.css';
 
@@ -51,116 +51,6 @@ const editorRef = ref<ExposeParam>();
 
 let socket = null;
 let isConnected = ref(false);
-
-let enableOnChange = true;
-
-function getCursorPositionInDivElement(divElement) {
-  const selection = window.getSelection();
-  const anchorNode = selection.anchorNode;
-  if (anchorNode && divElement.contains(anchorNode)) {
-    const textContent = divElement.textContent;
-    const anchorOffset = selection.anchorOffset;
-    let cursorIndex = 0;
-    for (let i = 0; i < textContent.length; i++) {
-      if (anchorNode === divElement && anchorOffset === i) {
-        break;
-      }
-
-      const node = divElement.childNodes[i];
-      const nodeTextLength = node.textContent.length;
-
-      if (anchorNode === node) {
-        cursorIndex += anchorOffset;
-        break;
-      }
-      cursorIndex += nodeTextLength;
-    }
-    return cursorIndex;
-  }
-  return -1;
-}
-
-function getCursorPos() {
-  const selection = window.getSelection();
-  let cursorElementText = '';
-  let position = 0;
-
-  if (selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    const cursorElement = range.startContainer.parentElement;
-    cursorElementText = cursorElement.innerText;
-    if (cursorElement.classList.contains('cm-line')) {
-      position = getCursorPositionInDivElement(cursorElement);
-    }
-  }
-  let lines = text.value.split('\n');
-  let count = 0;
-  lines.some((line) => {
-    if (line === cursorElementText) {
-      return true;
-    } else {
-      count += line.length + 1;
-    }
-    return false;
-  });
-
-  return count + position;
-}
-
-function updateCursorPosition(oldText, newText, cursorPosition) {
-  if (newText.length > oldText.length) {
-    let addPos = findAddedTextPositions(oldText, newText);
-    let start = addPos[0];
-    let end = addPos[1];
-    if (end < cursorPosition) {
-      return Math.min(cursorPosition + end - start, newText.length - 1);
-    } else {
-      return cursorPosition;
-    }
-  } else if (newText.length < oldText.length) {
-    let delPos = findDeletedTextPositions(oldText, newText);
-    let start = delPos[0];
-    let end = delPos[1];
-    console.info('start:', start, 'end:', end, 'cursorPosition:', cursorPosition);
-    if (start >= cursorPosition) {
-      return Math.min(cursorPosition, newText.length);
-    } else if (end < cursorPosition) {
-      return Math.max(cursorPosition - (end - start + 1), 0);
-    } else {
-      return Math.max(0, start);
-    }
-  } else {
-    return cursorPosition;
-  }
-}
-
-function findDeletedTextPositions(oldText, newText) {
-  let deletedPositions = [oldText.length];
-
-  for (let i = 0; i < newText.length; i++) {
-    if (oldText[i] !== newText[i]) {
-      deletedPositions[0] = i;
-      break;
-    }
-  }
-  deletedPositions[1] = deletedPositions[0] + oldText.length - newText.length - 1;
-
-  return deletedPositions;
-}
-
-function findAddedTextPositions(oldText, newText) {
-  let addedPositions = [];
-
-  for (let i = 0; i < oldText.length; i++) {
-    if (oldText[i] !== newText[i]) {
-      addedPositions[0] = i;
-      break;
-    }
-  }
-  addedPositions[1] = addedPositions[0] + newText.length - oldText.length;
-
-  return addedPositions;
-}
 
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
@@ -181,19 +71,8 @@ function toggleLanguage(lang) {
   }
 }
 
-const onSave = () => {
-  console.info('onSave');
-};
-
 let onChange = (change) => {
-  if (!enableOnChange) {
-    return;
-  }
 
-  console.info('change:', change);
-  if (change.trim() !== '' && online.value !== '0') {
-    socket.send(change);
-  }
 };
 
 onMounted(() => {
@@ -217,27 +96,8 @@ onMounted(() => {
     if (message.type === 1) {
       online.value = message.message;
     } else if (message.type === 2) {
-      enableOnChange = false;
+      // TODO
 
-      let preCursorPos = getCursorPos(text.value);
-      let preText = text.value;
-
-      text.value = message.message;
-
-      if (preText.length === 0) {
-        preCursorPos = message.message.length;
-      }
-
-      preCursorPos = updateCursorPosition(preText, message.message, preCursorPos);
-      nextTick(() => {
-        console.info('Configuring cursor position:', preCursorPos);
-        const option = {
-          cursorPos: preCursorPos,
-        };
-        editorRef.value?.focus(option);
-
-        enableOnChange = true;
-      });
     }
   });
 
