@@ -43,7 +43,11 @@ public class MDHandler {
     public void onMessage(Session session, Operation receivedMessage, @PathParam("id") String id) {
         log.info("Message received from: " + session.getId());
         sharedOperationMap.computeIfAbsent(id, k -> new TreeSet<>()).add(receivedMessage);
-        if (OperationUtil.addIfOperationValid(receivedMessage, sharedOperationMap.get(id))) {
+        if (receivedMessage.getType().equals("init")) {
+            SortedSet operations = sharedOperationMap.get(id);
+            Message message = new Message(2, mapper.writeValueAsString(operations));
+            session.getBasicRemote().sendText(mapper.writeValueAsString(message));
+        }else if (OperationUtil.addIfOperationValid(receivedMessage, sharedOperationMap.get(id))) {
             Message message = new Message(3, mapper.writeValueAsString(receivedMessage));
             sendAllMessage(mapper.writeValueAsString(message), id, session);
         } else {

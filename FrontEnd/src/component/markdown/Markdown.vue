@@ -32,11 +32,12 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref, watch} from 'vue';
+import {nextTick, onMounted, ref, watch} from 'vue';
 import type {ExposeParam} from 'md-editor-v3';
 import {MdEditor} from 'md-editor-v3';
 import {Emoji, ExportPDF} from '@vavt/v3-extension';
 import {toolbars} from './staticConfig';
+import {getCursorPos, updateCursorPosition} from './cursor';
 import DiffMatchPatch from "diff-match-patch";
 
 import '@vavt/v3-extension/lib/asset/style.css';
@@ -111,15 +112,38 @@ function findStringChanges(original: string, modified: string) {
   return changes;
 }
 
+function calculateStringFromOperations(operations) {
+  let str = "";
+
+  operations.sort((a, b) => a.timestamp - b.timestamp);
+
+  for (const operation of operations) {
+    const {type, position, content} = operation;
+
+    if (type === "insert") {
+      str = str.slice(0, position) + content + str.slice(position);
+    } else if (type === "delete") {
+      const endIndex = position + content.length;
+      str = str.slice(0, position) + str.slice(endIndex);
+    }
+  }
+
+  return str;
+}
+
 watch(text, (newValue, oldValue) => {
   const operation = findStringChanges(oldValue, newValue);
   operation.forEach((op) => {
     console.log(op);
     opList.push(op);
+    if (online.value !== '0') {
+      socket.send(JSON.stringify({
+        type: 3,
+        message: op
+      }));
+    }
   });
   console.log('=====================');
-
-
 });
 
 onMounted(() => {
@@ -143,12 +167,28 @@ onMounted(() => {
     if (message.type === 1) {
       online.value = message.message;
     } else if (message.type === 2) {
-      // Init
-      // TODO
+      // Init or Error
+      opList = message.message;
+      let preCursorPos = getCursorPos(text.value);
+      let preText = text.value;
+      const newText = calculateStringFromOperations(opList);
+      text.value = newText;
 
+      if (preText.length === 0) {
+        preCursorPos = message.message.length;
+      }
+
+      preCursorPos = updateCursorPosition(preText, newText, preCursorPos);
+      nextTick(() => {
+        console.info('Configuring cursor position:', preCursorPos);
+        const option = {
+          cursorPos: preCursorPos,
+        };
+        editorRef.value?.focus(option);
+      });
     } else if (message.type === 3) {
       // New Ops
-      // TODO
+      // TODO Check if valid, not valid, request Init message
     }
   });
 
