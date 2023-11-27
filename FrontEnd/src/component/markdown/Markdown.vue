@@ -22,7 +22,6 @@
       Online: {{ online }}
     </div>
     <MdEditor v-model="text" :theme="theme" :language="language" :toolbars="toolbars" no-upload-img
-              @on-change="onChange"
               ref="editorRef">
       <template #defToolbars>
         <Emoji/>
@@ -33,11 +32,12 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref} from 'vue';
+import {onMounted, ref, watch} from 'vue';
 import type {ExposeParam} from 'md-editor-v3';
 import {MdEditor} from 'md-editor-v3';
 import {Emoji, ExportPDF} from '@vavt/v3-extension';
 import {toolbars} from './staticConfig';
+import DiffMatchPatch from "diff-match-patch";
 
 import '@vavt/v3-extension/lib/asset/style.css';
 import 'md-editor-v3/lib/style.css';
@@ -46,6 +46,7 @@ import './Markdown.css';
 let theme = ref('light');
 let language = ref('en-US');
 let text = ref('');
+let opList = [];
 let online = ref('0');
 const editorRef = ref<ExposeParam>();
 
@@ -71,9 +72,55 @@ function toggleLanguage(lang) {
   }
 }
 
-let onChange = (change) => {
+function findStringChanges(original: string, modified: string) {
+  const dmp = new DiffMatchPatch();
+  const diffs = dmp.diff_main(original, modified);
+  dmp.diff_cleanupSemantic(diffs);
 
-};
+  const changes: Array<{ type: string; position: number; content: string; timestamp: number }> = [];
+  let currentPosition = 0;
+  let timestamp = Date.now();
+
+  for (const [op, text] of diffs) {
+    const change = {
+      type: "",
+      position: currentPosition,
+      content: text,
+      timestamp: timestamp,
+    };
+
+    if (op === 0) {
+      currentPosition += text.length;
+    } else if (op === 1) {
+      change.type = "insert";
+      timestamp += 1;
+      changes.push(change);
+      currentPosition += text.length;
+    } else if (op === -1) {
+      change.type = "delete";
+      timestamp += 1;
+      changes.push(change);
+    } else if (op === -1) {
+      change.type = "edit";
+      timestamp += 1;
+      changes.push(change);
+      currentPosition += text.length;
+    }
+  }
+
+  return changes;
+}
+
+watch(text, (newValue, oldValue) => {
+  const operation = findStringChanges(oldValue, newValue);
+  operation.forEach((op) => {
+    console.log(op);
+    opList.push(op);
+  });
+  console.log('=====================');
+
+
+});
 
 onMounted(() => {
   document.title = 'Markdown Editor';
@@ -87,17 +134,21 @@ onMounted(() => {
     alert('Please enter a valid id.');
   }
   socketURL += id;
-  console.info('socketURL:', socketURL);
+  console.log('socketURL:', socketURL);
   socket = new WebSocket(socketURL);
 
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
-    console.info('message:', message);
+    console.log('message:', message);
     if (message.type === 1) {
       online.value = message.message;
     } else if (message.type === 2) {
+      // Init
       // TODO
 
+    } else if (message.type === 3) {
+      // New Ops
+      // TODO
     }
   });
 
