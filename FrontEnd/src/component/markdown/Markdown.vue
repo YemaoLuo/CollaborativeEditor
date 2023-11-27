@@ -182,7 +182,7 @@ onMounted(() => {
       }
 
       preCursorPos = updateCursorPosition(preText, newText, preCursorPos);
-      preCursorPos = Math.min(preCursorPos, newText.length - 1);
+      preCursorPos = preCursorPos > newText.length ? newText.length : preCursorPos;
       nextTick(() => {
         console.info('Configuring cursor position:', preCursorPos);
         const option = {
@@ -207,7 +207,7 @@ onMounted(() => {
       }
 
       preCursorPos = updateCursorPosition(preText, newText, preCursorPos);
-      preCursorPos = Math.min(preCursorPos, newText.length - 1);
+      preCursorPos = preCursorPos > newText.length ? newText.length : preCursorPos;
       nextTick(() => {
         console.info('Configuring cursor position:', preCursorPos);
         const option = {

@@ -23,7 +23,11 @@ export class OperationList {
     getString() {
         let str = "";
         for (const operation of this.operations) {
-            str += operation.content;
+            if (operation.type === "insert") {
+                str = str.slice(0, operation.position) + operation.content + str.slice(operation.position);
+            } else if (operation.type === "delete") {
+                str = str.slice(0, operation.position) + str.slice(operation.position + operation.content.length);
+            }
         }
         return str;
     }

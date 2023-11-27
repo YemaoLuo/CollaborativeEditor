@@ -52,7 +52,9 @@ export function getCursorPos(text) {
 }
 
 export function updateCursorPosition(oldText, newText, cursorPosition) {
-    if (newText.length > oldText.length) {
+    if (cursorPosition === undefined) {
+        return 0;
+    } else if (newText.length > oldText.length) {
         let addPos = findAddedTextPositions(oldText, newText);
         let start = addPos[0];
         let end = addPos[1];
@@ -75,7 +77,7 @@ export function updateCursorPosition(oldText, newText, cursorPosition) {
             return Math.max(0, start);
         }
     } else {
-        return cursorPosition === undefined ? newText.length : cursorPosition;
+        return cursorPosition;
     }
 }
 
