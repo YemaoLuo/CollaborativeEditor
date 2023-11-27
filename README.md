@@ -7,4 +7,4 @@
 2. **V1.1**: Fix bugs; Improve mobile and button experience
 3. **V2.0**: Support multi documents; Support drawing board
 4. **V2.1**: Support pdf export; Support emoji; Improve drawing compress transmission
-5. **V3.0(TODO)**: Support CRDT algorithm for md editor
+5. **V3.0**: Support CRDT algorithm for md editor; Improve code efficiency

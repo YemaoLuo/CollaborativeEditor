@@ -37,7 +37,7 @@ export function getCursorPos(text) {
             position = getCursorPositionInDivElement(cursorElement);
         }
     }
-    let lines = text.value.split('\n');
+    let lines = text.split('\n');
     let count = 0;
     lines.some((line) => {
         if (line === cursorElementText) {

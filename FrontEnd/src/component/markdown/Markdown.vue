@@ -33,82 +33,71 @@
 
 <script setup lang="ts">
 import {nextTick, onMounted, ref, watch} from 'vue';
-import type {ExposeParam} from 'md-editor-v3';
 import {MdEditor} from 'md-editor-v3';
 import {Emoji, ExportPDF} from '@vavt/v3-extension';
 import {toolbars} from './staticConfig';
 import {getCursorPos, updateCursorPosition} from './cursor';
 import {OperationList} from './OperationList';
-import DiffMatchPatch from "diff-match-patch";
+import DiffMatchPatch from 'diff-match-patch';
 
 import '@vavt/v3-extension/lib/asset/style.css';
 import 'md-editor-v3/lib/style.css';
 import './Markdown.css';
 
-let theme = ref('light');
-let language = ref('en-US');
-let text = ref('');
-let opList = new OperationList();
-let online = ref('0');
-const editorRef = ref<ExposeParam>();
+const theme = ref('light');
+const language = ref('en-US');
+const text = ref('');
+const opList = new OperationList();
+const online = ref('0');
+const editorRef = ref();
 
 let socket = null;
-let isConnected = ref(false);
+const isConnected = ref(false);
 
 let enableOnChange = true;
 
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
-  if (theme.value === 'dark') {
-    document.body.style.backgroundColor = 'black';
-    document.body.style.color = 'white';
-  } else {
-    document.body.style.backgroundColor = '';
-    document.body.style.color = '';
-  }
+  document.body.style.backgroundColor = theme.value === 'dark' ? 'black' : '';
+  document.body.style.color = theme.value === 'dark' ? 'white' : '';
 }
 
 function toggleLanguage(lang) {
-  if (lang === 'en-US') {
-    language.value = 'zh-CN';
-  } else {
-    language.value = 'en-US';
-  }
+  language.value = lang === 'en-US' ? 'zh-CN' : 'en-US';
 }
 
-function findStringChanges(original: string, modified: string) {
+function findStringChanges(original, modified) {
   const dmp = new DiffMatchPatch();
   const diffs = dmp.diff_main(original, modified);
   dmp.diff_cleanupSemantic(diffs);
 
-  const changes: Array<{ type: string; position: number; content: string; timestamp: number }> = [];
+  const changes = [];
   let currentPosition = 0;
   let timestamp = Date.now();
 
   for (const [op, text] of diffs) {
     const change = {
-      type: "",
+      type: '',
       position: currentPosition,
       content: text,
-      timestamp: timestamp,
+      timestamp,
     };
 
-    if (op === 0) {
-      currentPosition += text.length;
-    } else if (op === 1) {
-      change.type = "insert";
-      timestamp += 1;
-      changes.push(change);
-      currentPosition += text.length;
-    } else if (op === -1) {
-      change.type = "delete";
-      timestamp += 1;
-      changes.push(change);
-    } else if (op === -1) {
-      change.type = "edit";
-      timestamp += 1;
-      changes.push(change);
-      currentPosition += text.length;
+    switch (op) {
+      case 0:
+        currentPosition += text.length;
+        break;
+      case 1:
+        change.type = 'insert';
+        timestamp += 1;
+        changes.push(change);
+        currentPosition += text.length;
+        break;
+      case -1:
+        change.type = 'delete';
+        timestamp += 1;
+        changes.push(change);
+        break;
     }
   }
 
@@ -117,6 +106,7 @@ function findStringChanges(original: string, modified: string) {
 
 function calculateStringFromOperations(operationList: OperationList) {
   let str = "";
+
   for (const operation of operationList.getSortedOperations()) {
     const {type, position, content} = operation;
 
@@ -132,15 +122,15 @@ function calculateStringFromOperations(operationList: OperationList) {
 }
 
 watch(text, (newValue, oldValue) => {
-  if (!enableOnChange) {
-    return;
-  }
+  if (!enableOnChange) return;
 
-  const operation = findStringChanges(oldValue, newValue);
-  operation.forEach((op) => {
+  const operations = findStringChanges(oldValue, newValue);
+
+  operations.forEach((op) => {
     console.log(op);
     opList.add(op);
-    if (online.value !== '0') {
+
+    if (online.value !== '0' && socket) {
       socket.send(JSON.stringify(op));
     }
   });
@@ -150,31 +140,30 @@ onMounted(() => {
   document.title = 'Markdown Editor';
 
   const urlParams = new URLSearchParams(window.location.search);
-  let socketURL = 'ws://';
-  socketURL += window.location.host;
-  //TODO
-  socketURL = 'ws://localhost:12345'
-  socketURL += '/MDHandler/';
-  const id = urlParams.get('id');
-  if (id == null) {
-    alert('Please enter a valid id.');
-  }
-  socketURL += id;
-  console.log('socketURL:', socketURL);
+  const socketURL = `ws://${window.location.host}/MDHandler/${urlParams.get('id')}`;
+  // const socketURL = `ws://localhost:12345/MDHandler/${urlParams.get('id')}`;
   socket = new WebSocket(socketURL);
 
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
     console.log('message:', message);
+
     if (message.type === 1) {
       online.value = message.message;
-    } else if (message.type === 2) {
-      // Init or Error
+    } else {
       enableOnChange = false;
-      opList.reset(message.message);
-      let preCursorPos = getCursorPos(text);
+      let preCursorPos = getCursorPos(text.value);
       let preText = text.value;
-      const newText = calculateStringFromOperations(opList);
+      let newText;
+
+      if (message.type === 2) {
+        opList.reset(message.message);
+        newText = calculateStringFromOperations(opList);
+      } else if (message.type === 3) {
+        opList.add(message.message);
+        newText = opList.getString();
+      }
+
       text.value = newText;
 
       if (preText.length === 0) {
@@ -183,38 +172,10 @@ onMounted(() => {
 
       preCursorPos = updateCursorPosition(preText, newText, preCursorPos);
       preCursorPos = preCursorPos > newText.length ? newText.length : preCursorPos;
+
       nextTick(() => {
         console.info('Configuring cursor position:', preCursorPos);
-        const option = {
-          cursorPos: preCursorPos,
-        };
-        editorRef.value?.focus(option);
-
-        enableOnChange = true;
-      });
-    } else if (message.type === 3) {
-      // New Ops
-      enableOnChange = false;
-      const newOp = message.message;
-      opList.add(newOp);
-      let preCursorPos = getCursorPos(text);
-      let preText = text.value;
-      const newText = opList.getString();
-      text.value = newText;
-
-      if (preText.length === 0) {
-        preCursorPos = message.message.length;
-      }
-
-      preCursorPos = updateCursorPosition(preText, newText, preCursorPos);
-      preCursorPos = preCursorPos > newText.length ? newText.length : preCursorPos;
-      nextTick(() => {
-        console.info('Configuring cursor position:', preCursorPos);
-        const option = {
-          cursorPos: preCursorPos,
-        };
-        editorRef.value?.focus(option);
-
+        editorRef.value?.focus({cursorPos: preCursorPos});
         enableOnChange = true;
       });
     }
