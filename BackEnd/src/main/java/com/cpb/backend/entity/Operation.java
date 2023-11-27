@@ -3,7 +3,6 @@ package com.cpb.backend.entity;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Type:<p>
@@ -21,7 +20,7 @@ public class Operation implements Comparable<Operation> {
     private long timestamp;
 
     @Override
-    public int compareTo(@NotNull Operation o) {
+    public int compareTo(Operation o) {
         return Long.compare(this.timestamp, o.timestamp);
     }
 }
