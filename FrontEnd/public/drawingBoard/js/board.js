@@ -24,8 +24,8 @@ if (id === null) {
     alert("Please enter a valid id.")
 }
 console.log("onload id=" + id);
-// const url = "ws://" + window.location.host + "/DrawingHandler/" + id;
-const url = "ws://" + "127.0.0.1:12345" + "/DrawingHandler/" + id;
+const url = "ws://" + window.location.host + "/DrawingHandler/" + id;
+// const url = "ws://" + "127.0.0.1:12345" + "/DrawingHandler/" + id;
 console.log("websocket url:" + url);
 socket = new WebSocket(url);
 
