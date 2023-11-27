@@ -38,6 +38,7 @@ import {MdEditor} from 'md-editor-v3';
 import {Emoji, ExportPDF} from '@vavt/v3-extension';
 import {toolbars} from './staticConfig';
 import {getCursorPos, updateCursorPosition} from './cursor';
+import {OperationList} from './OperationList';
 import DiffMatchPatch from "diff-match-patch";
 
 import '@vavt/v3-extension/lib/asset/style.css';
@@ -47,7 +48,7 @@ import './Markdown.css';
 let theme = ref('light');
 let language = ref('en-US');
 let text = ref('');
-let opList = [];
+let opList = new OperationList();
 let online = ref('0');
 const editorRef = ref<ExposeParam>();
 
@@ -135,7 +136,7 @@ watch(text, (newValue, oldValue) => {
   const operation = findStringChanges(oldValue, newValue);
   operation.forEach((op) => {
     console.log(op);
-    opList.push(op);
+    opList.add(op);
     if (online.value !== '0') {
       socket.send(JSON.stringify({
         type: 3,
@@ -168,7 +169,7 @@ onMounted(() => {
       online.value = message.message;
     } else if (message.type === 2) {
       // Init or Error
-      opList = message.message;
+      opList.reset(message.message);
       let preCursorPos = getCursorPos(text.value);
       let preText = text.value;
       const newText = calculateStringFromOperations(opList);
@@ -188,7 +189,25 @@ onMounted(() => {
       });
     } else if (message.type === 3) {
       // New Ops
-      // TODO Check if valid, not valid, request Init message
+      const newOp = message.message;
+      opList.add(newOp);
+      let preCursorPos = getCursorPos(text.value);
+      let preText = text.value;
+      const newText = opList.getString();
+      text.value = newText;
+
+      if (preText.length === 0) {
+        preCursorPos = message.message.length;
+      }
+
+      preCursorPos = updateCursorPosition(preText, newText, preCursorPos);
+      nextTick(() => {
+        console.info('Configuring cursor position:', preCursorPos);
+        const option = {
+          cursorPos: preCursorPos,
+        };
+        editorRef.value?.focus(option);
+      });
     }
   });
 
