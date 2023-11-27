@@ -9,7 +9,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
+import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,7 +28,7 @@ public class DrawingHandler {
     public void onOpen(Session session, @PathParam("id") String id) {
         sessions.computeIfAbsent(id, k -> new HashSet<>()).add(session);
         if (picDataMap.containsKey(id)) {
-            session.getBasicRemote().sendText(mapper.writeValueAsString(new Message(2, Arrays.toString(picDataMap.get(id)))));
+            session.getBasicRemote().sendBinary(ByteBuffer.wrap(picDataMap.get(id)));
         }
         log.info("Number of sessions for ID {}: {}", id, sessions.containsKey(id) ? sessions.get(id).size() : 0);
         log.info("Total number of sessions: {}", getTotalNumberOfSessions());
