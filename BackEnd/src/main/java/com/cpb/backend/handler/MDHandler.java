@@ -1,6 +1,8 @@
 package com.cpb.backend.handler;
 
 import com.cpb.backend.entity.Message;
+import com.cpb.backend.entity.Operation;
+import com.cpb.backend.util.OperationUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
@@ -9,9 +11,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ServerEndpoint("/MDHandler/{id}")
@@ -20,19 +20,42 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MDHandler {
 
     private static final Map<String, Set<Session>> sessions = new ConcurrentHashMap<>();
-    private static final Map<String, String> sharedTextMap = new ConcurrentHashMap<>();
+    private static final Map<String, SortedSet<Operation>> sharedOperationMap = new ConcurrentHashMap<>();
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @OnOpen
     @SneakyThrows
     public void onOpen(Session session, @PathParam("id") String id) {
         sessions.computeIfAbsent(id, k -> new HashSet<>()).add(session);
-        Message message = new Message(2, sharedTextMap.getOrDefault(id, ""));
-        session.getBasicRemote().sendText(mapper.writeValueAsString(message));
+        SortedSet operations = sharedOperationMap.get(id);
+        if (operations != null) {
+            Message message = new Message(2, operations);
+            session.getBasicRemote().sendText(mapper.writeValueAsString(message));
+        }
         log.info("Number of sessions for ID {}: {}", id, sessions.containsKey(id) ? sessions.get(id).size() : 0);
         log.info("Total number of sessions: {}", getTotalNumberOfSessions());
         Message sessionCountMessage = new Message(1, String.valueOf(getTotalNumberOfSessions()));
         sendAllMessage(mapper.writeValueAsString(sessionCountMessage), id, null);
+    }
+
+    @OnMessage
+    @SneakyThrows
+    public void onMessage(Session session, String message, @PathParam("id") String id) {
+        Operation receivedMessage = mapper.readValue(message, Operation.class);
+        log.info("Message received from: " + session.getId());
+        sharedOperationMap.computeIfAbsent(id, k -> new TreeSet<>()).add(receivedMessage);
+        if (receivedMessage.getType().equals("init")) {
+            SortedSet operations = sharedOperationMap.get(id);
+            session.getBasicRemote().sendText(mapper.writeValueAsString(new Message(2, mapper.writeValueAsString(operations))));
+        } else if (OperationUtil.addIfOperationValid(receivedMessage, sharedOperationMap.get(id))) {
+            sendAllMessage(mapper.writeValueAsString(new Message(3, receivedMessage)), id, session);
+        } else {
+            log.info("Operation is not valid for ID {} from: {}", id, session.getId());
+            SortedSet operations = sharedOperationMap.get(id);
+            if (operations != null) {
+                session.getBasicRemote().sendText(mapper.writeValueAsString(new Message(2,operations)));
+            }
+        }
     }
 
     @OnClose
@@ -50,15 +73,6 @@ public class MDHandler {
         log.info("Total number of sessions: {}", getTotalNumberOfSessions());
         Message sessionCountMessage = new Message(1, String.valueOf(getTotalNumberOfSessions()));
         sendAllMessage(mapper.writeValueAsString(sessionCountMessage), id, session);
-    }
-
-    @OnMessage
-    @SneakyThrows
-    public void onMessage(Session session, String receivedMessage, @PathParam("id") String id) {
-        log.info("Message received from: " + session.getId());
-        sharedTextMap.put(id, receivedMessage);
-        Message message = new Message(2, sharedTextMap.getOrDefault(id, ""));
-        sendAllMessage(mapper.writeValueAsString(message), id, session);
     }
 
     @OnError

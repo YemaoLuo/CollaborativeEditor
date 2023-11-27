@@ -1,5 +1,7 @@
 D:\Coding\collaborative_editor\BackEnd\src\main\java\com\cpb\backend\config\MsgSizeConfig.java
+D:\Coding\collaborative_editor\BackEnd\src\main\java\com\cpb\backend\util\OperationUtil.java
 D:\Coding\collaborative_editor\BackEnd\src\main\java\com\cpb\backend\BackEndApplication.java
+D:\Coding\collaborative_editor\BackEnd\src\main\java\com\cpb\backend\entity\Operation.java
 D:\Coding\collaborative_editor\BackEnd\src\main\java\com\cpb\backend\entity\Message.java
 D:\Coding\collaborative_editor\BackEnd\src\main\java\com\cpb\backend\handler\MDHandler.java
 D:\Coding\collaborative_editor\BackEnd\src\main\java\com\cpb\backend\handler\DrawingHandler.java

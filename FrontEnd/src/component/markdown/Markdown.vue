@@ -22,7 +22,6 @@
       Online: {{ online }}
     </div>
     <MdEditor v-model="text" :theme="theme" :language="language" :toolbars="toolbars" no-upload-img
-              @on-change="onChange" @on-save="onSave"
               ref="editorRef">
       <template #defToolbars>
         <Emoji/>
@@ -33,209 +32,150 @@
 </template>
 
 <script setup lang="ts">
-import {nextTick, onMounted, ref} from 'vue';
-import type {ExposeParam} from 'md-editor-v3';
+import {nextTick, onMounted, ref, watch} from 'vue';
 import {MdEditor} from 'md-editor-v3';
 import {Emoji, ExportPDF} from '@vavt/v3-extension';
-import '@vavt/v3-extension/lib/asset/style.css';
 import {toolbars} from './staticConfig';
+import {getCursorPos, updateCursorPosition} from './cursor';
+import {OperationList} from './OperationList';
+import DiffMatchPatch from 'diff-match-patch';
 
+import '@vavt/v3-extension/lib/asset/style.css';
 import 'md-editor-v3/lib/style.css';
 import './Markdown.css';
 
-let theme = ref('light');
-let language = ref('en-US');
-let text = ref('');
-let online = ref('0');
-const editorRef = ref<ExposeParam>();
+const theme = ref('light');
+const language = ref('en-US');
+const text = ref('');
+const opList = new OperationList();
+const online = ref('0');
+const editorRef = ref();
 
 let socket = null;
-let isConnected = ref(false);
+const isConnected = ref(false);
 
 let enableOnChange = true;
 
-function getCursorPositionInDivElement(divElement) {
-  const selection = window.getSelection();
-  const anchorNode = selection.anchorNode;
-  if (anchorNode && divElement.contains(anchorNode)) {
-    const textContent = divElement.textContent;
-    const anchorOffset = selection.anchorOffset;
-    let cursorIndex = 0;
-    for (let i = 0; i < textContent.length; i++) {
-      if (anchorNode === divElement && anchorOffset === i) {
-        break;
-      }
-
-      const node = divElement.childNodes[i];
-      const nodeTextLength = node.textContent.length;
-
-      if (anchorNode === node) {
-        cursorIndex += anchorOffset;
-        break;
-      }
-      cursorIndex += nodeTextLength;
-    }
-    return cursorIndex;
-  }
-  return -1;
-}
-
-function getCursorPos() {
-  const selection = window.getSelection();
-  let cursorElementText = '';
-  let position = 0;
-
-  if (selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    const cursorElement = range.startContainer.parentElement;
-    cursorElementText = cursorElement.innerText;
-    if (cursorElement.classList.contains('cm-line')) {
-      position = getCursorPositionInDivElement(cursorElement);
-    }
-  }
-  let lines = text.value.split('\n');
-  let count = 0;
-  lines.some((line) => {
-    if (line === cursorElementText) {
-      return true;
-    } else {
-      count += line.length + 1;
-    }
-    return false;
-  });
-
-  return count + position;
-}
-
-function updateCursorPosition(oldText, newText, cursorPosition) {
-  if (newText.length > oldText.length) {
-    let addPos = findAddedTextPositions(oldText, newText);
-    let start = addPos[0];
-    let end = addPos[1];
-    if (end < cursorPosition) {
-      return Math.min(cursorPosition + end - start, newText.length - 1);
-    } else {
-      return cursorPosition;
-    }
-  } else if (newText.length < oldText.length) {
-    let delPos = findDeletedTextPositions(oldText, newText);
-    let start = delPos[0];
-    let end = delPos[1];
-    console.info('start:', start, 'end:', end, 'cursorPosition:', cursorPosition);
-    if (start >= cursorPosition) {
-      return Math.min(cursorPosition, newText.length);
-    } else if (end < cursorPosition) {
-      return Math.max(cursorPosition - (end - start + 1), 0);
-    } else {
-      return Math.max(0, start);
-    }
-  } else {
-    return cursorPosition;
-  }
-}
-
-function findDeletedTextPositions(oldText, newText) {
-  let deletedPositions = [oldText.length];
-
-  for (let i = 0; i < newText.length; i++) {
-    if (oldText[i] !== newText[i]) {
-      deletedPositions[0] = i;
-      break;
-    }
-  }
-  deletedPositions[1] = deletedPositions[0] + oldText.length - newText.length - 1;
-
-  return deletedPositions;
-}
-
-function findAddedTextPositions(oldText, newText) {
-  let addedPositions = [];
-
-  for (let i = 0; i < oldText.length; i++) {
-    if (oldText[i] !== newText[i]) {
-      addedPositions[0] = i;
-      break;
-    }
-  }
-  addedPositions[1] = addedPositions[0] + newText.length - oldText.length;
-
-  return addedPositions;
-}
-
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
-  if (theme.value === 'dark') {
-    document.body.style.backgroundColor = 'black';
-    document.body.style.color = 'white';
-  } else {
-    document.body.style.backgroundColor = '';
-    document.body.style.color = '';
-  }
+  document.body.style.backgroundColor = theme.value === 'dark' ? 'black' : '';
+  document.body.style.color = theme.value === 'dark' ? 'white' : '';
 }
 
 function toggleLanguage(lang) {
-  if (lang === 'en-US') {
-    language.value = 'zh-CN';
-  } else {
-    language.value = 'en-US';
-  }
+  language.value = lang === 'en-US' ? 'zh-CN' : 'en-US';
 }
 
-const onSave = () => {
-  console.info('onSave');
-};
+function findStringChanges(original, modified) {
+  const dmp = new DiffMatchPatch();
+  const diffs = dmp.diff_main(original, modified);
+  dmp.diff_cleanupSemantic(diffs);
 
-let onChange = (change) => {
-  if (!enableOnChange) {
-    return;
+  const changes = [];
+  let currentPosition = 0;
+  let timestamp = Date.now();
+
+  for (const [op, text] of diffs) {
+    const change = {
+      type: '',
+      position: currentPosition,
+      content: text,
+      timestamp,
+    };
+
+    switch (op) {
+      case 0:
+        currentPosition += text.length;
+        break;
+      case 1:
+        change.type = 'insert';
+        timestamp += 1;
+        changes.push(change);
+        currentPosition += text.length;
+        break;
+      case -1:
+        change.type = 'delete';
+        timestamp += 1;
+        changes.push(change);
+        break;
+    }
   }
 
-  console.info('change:', change);
-  if (change.trim() !== '' && online.value !== '0') {
-    socket.send(change);
+  return changes;
+}
+
+function calculateStringFromOperations(operationList: OperationList) {
+  let str = "";
+
+  for (const operation of operationList.getSortedOperations()) {
+    const {type, position, content} = operation;
+
+    if (type === "insert") {
+      str = str.slice(0, position) + content + str.slice(position);
+    } else if (type === "delete") {
+      const endIndex = position + content.length;
+      str = str.slice(0, position) + str.slice(endIndex);
+    }
   }
-};
+
+  return str;
+}
+
+watch(text, (newValue, oldValue) => {
+  if (!enableOnChange) return;
+
+  const operations = findStringChanges(oldValue, newValue);
+
+  operations.forEach((op) => {
+    console.log(op);
+    opList.add(op);
+
+    if (online.value !== '0' && socket) {
+      socket.send(JSON.stringify(op));
+    }
+  });
+});
 
 onMounted(() => {
   document.title = 'Markdown Editor';
 
   const urlParams = new URLSearchParams(window.location.search);
-  let socketURL = 'ws://';
-  socketURL += window.location.host;
-  socketURL += '/MDHandler/';
-  const id = urlParams.get('id');
-  if (id == null) {
-    alert('Please enter a valid id.');
-  }
-  socketURL += id;
-  console.info('socketURL:', socketURL);
+  const socketURL = `ws://${window.location.host}/MDHandler/${urlParams.get('id')}`;
+  // const socketURL = `ws://localhost:12345/MDHandler/${urlParams.get('id')}`;
   socket = new WebSocket(socketURL);
 
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
-    console.info('message:', message);
+    console.log('message:', message);
+
     if (message.type === 1) {
       online.value = message.message;
-    } else if (message.type === 2) {
+    } else {
       enableOnChange = false;
-
       let preCursorPos = getCursorPos(text.value);
       let preText = text.value;
+      let newText;
 
-      text.value = message.message;
+      if (message.type === 2) {
+        opList.reset(message.message);
+        newText = calculateStringFromOperations(opList);
+      } else if (message.type === 3) {
+        opList.add(message.message);
+        newText = opList.getString();
+      }
+
+      text.value = newText;
 
       if (preText.length === 0) {
         preCursorPos = message.message.length;
       }
 
-      preCursorPos = updateCursorPosition(preText, message.message, preCursorPos);
+      preCursorPos = updateCursorPosition(preText, newText, preCursorPos);
+      preCursorPos = preCursorPos > newText.length ? newText.length : preCursorPos;
+
       nextTick(() => {
         console.info('Configuring cursor position:', preCursorPos);
-        const option = {
-          cursorPos: preCursorPos,
-        };
-        editorRef.value?.focus(option);
-
+        editorRef.value?.focus({cursorPos: preCursorPos});
         enableOnChange = true;
       });
     }
