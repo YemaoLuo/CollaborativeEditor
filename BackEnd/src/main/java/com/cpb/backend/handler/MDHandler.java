@@ -29,7 +29,7 @@ public class MDHandler {
         sessions.computeIfAbsent(id, k -> new HashSet<>()).add(session);
         SortedSet operations = sharedOperationMap.get(id);
         if (operations != null) {
-            Message message = new Message(2, mapper.writeValueAsString(operations));
+            Message message = new Message(2, operations);
             session.getBasicRemote().sendText(mapper.writeValueAsString(message));
         }
         log.info("Number of sessions for ID {}: {}", id, sessions.containsKey(id) ? sessions.get(id).size() : 0);
@@ -40,22 +40,20 @@ public class MDHandler {
 
     @OnMessage
     @SneakyThrows
-    public void onMessage(Session session, Operation receivedMessage, @PathParam("id") String id) {
+    public void onMessage(Session session, String message, @PathParam("id") String id) {
+        Operation receivedMessage = mapper.readValue(message, Operation.class);
         log.info("Message received from: " + session.getId());
         sharedOperationMap.computeIfAbsent(id, k -> new TreeSet<>()).add(receivedMessage);
         if (receivedMessage.getType().equals("init")) {
             SortedSet operations = sharedOperationMap.get(id);
-            Message message = new Message(2, mapper.writeValueAsString(operations));
-            session.getBasicRemote().sendText(mapper.writeValueAsString(message));
-        }else if (OperationUtil.addIfOperationValid(receivedMessage, sharedOperationMap.get(id))) {
-            Message message = new Message(3, mapper.writeValueAsString(receivedMessage));
-            sendAllMessage(mapper.writeValueAsString(message), id, session);
+            session.getBasicRemote().sendText(mapper.writeValueAsString(new Message(2, mapper.writeValueAsString(operations))));
+        } else if (OperationUtil.addIfOperationValid(receivedMessage, sharedOperationMap.get(id))) {
+            sendAllMessage(mapper.writeValueAsString(new Message(3, receivedMessage)), id, session);
         } else {
             log.info("Operation is not valid for ID {} from: {}", id, session.getId());
             SortedSet operations = sharedOperationMap.get(id);
             if (operations != null) {
-                Message message = new Message(2, mapper.writeValueAsString(operations));
-                session.getBasicRemote().sendText(mapper.writeValueAsString(message));
+                session.getBasicRemote().sendText(mapper.writeValueAsString(new Message(2,operations)));
             }
         }
     }

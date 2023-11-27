@@ -20,5 +20,5 @@ public class Message {
 
     private int type;
 
-    private String message;
+    private Object message;
 }

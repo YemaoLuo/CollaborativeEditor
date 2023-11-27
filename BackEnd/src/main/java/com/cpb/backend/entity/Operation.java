@@ -2,6 +2,7 @@ package com.cpb.backend.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -12,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
  */
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class Operation implements Comparable<Operation> {
     private String type;
     private int position;

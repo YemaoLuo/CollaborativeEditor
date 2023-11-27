@@ -55,6 +55,8 @@ const editorRef = ref<ExposeParam>();
 let socket = null;
 let isConnected = ref(false);
 
+let enableOnChange = true;
+
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
   if (theme.value === 'dark') {
@@ -113,12 +115,9 @@ function findStringChanges(original: string, modified: string) {
   return changes;
 }
 
-function calculateStringFromOperations(operations) {
+function calculateStringFromOperations(operationList: OperationList) {
   let str = "";
-
-  operations.sort((a, b) => a.timestamp - b.timestamp);
-
-  for (const operation of operations) {
+  for (const operation of operationList.getSortedOperations()) {
     const {type, position, content} = operation;
 
     if (type === "insert") {
@@ -133,18 +132,18 @@ function calculateStringFromOperations(operations) {
 }
 
 watch(text, (newValue, oldValue) => {
+  if (!enableOnChange) {
+    return;
+  }
+
   const operation = findStringChanges(oldValue, newValue);
   operation.forEach((op) => {
     console.log(op);
     opList.add(op);
     if (online.value !== '0') {
-      socket.send(JSON.stringify({
-        type: 3,
-        message: op
-      }));
+      socket.send(JSON.stringify(op));
     }
   });
-  console.log('=====================');
 });
 
 onMounted(() => {
@@ -153,6 +152,8 @@ onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search);
   let socketURL = 'ws://';
   socketURL += window.location.host;
+  //TODO
+  socketURL = 'ws://localhost:12345'
   socketURL += '/MDHandler/';
   const id = urlParams.get('id');
   if (id == null) {
@@ -169,8 +170,9 @@ onMounted(() => {
       online.value = message.message;
     } else if (message.type === 2) {
       // Init or Error
+      enableOnChange = false;
       opList.reset(message.message);
-      let preCursorPos = getCursorPos(text.value);
+      let preCursorPos = getCursorPos(text);
       let preText = text.value;
       const newText = calculateStringFromOperations(opList);
       text.value = newText;
@@ -180,18 +182,22 @@ onMounted(() => {
       }
 
       preCursorPos = updateCursorPosition(preText, newText, preCursorPos);
+      preCursorPos = Math.min(preCursorPos, newText.length - 1);
       nextTick(() => {
         console.info('Configuring cursor position:', preCursorPos);
         const option = {
           cursorPos: preCursorPos,
         };
         editorRef.value?.focus(option);
+
+        enableOnChange = true;
       });
     } else if (message.type === 3) {
       // New Ops
+      enableOnChange = false;
       const newOp = message.message;
       opList.add(newOp);
-      let preCursorPos = getCursorPos(text.value);
+      let preCursorPos = getCursorPos(text);
       let preText = text.value;
       const newText = opList.getString();
       text.value = newText;
@@ -201,12 +207,15 @@ onMounted(() => {
       }
 
       preCursorPos = updateCursorPosition(preText, newText, preCursorPos);
+      preCursorPos = Math.min(preCursorPos, newText.length - 1);
       nextTick(() => {
         console.info('Configuring cursor position:', preCursorPos);
         const option = {
           cursorPos: preCursorPos,
         };
         editorRef.value?.focus(option);
+
+        enableOnChange = true;
       });
     }
   });
