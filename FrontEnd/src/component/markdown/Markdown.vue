@@ -4,14 +4,14 @@
       {{ language === 'zh-CN' ? '在线协作Markdown编辑器' : 'Collaborative Markdown Editor' }}
     </h1>
     <div class="button-group">
-      <button class="theme-button" :class="{ dark: theme === 'dark' }" @click="toggleTheme">
-        {{ theme === 'light' ? 'Dark' : 'Light' }}
+      <button class="theme-button" :class="{ dark: theme === 'dark' }" @click="toggleTheme()">
+        {{ themeText }}
       </button>
       <button class="language-button" :class="{ active: language === 'zh-CN' }" @click="toggleLanguage(language)">
         {{ language === 'zh-CN' ? 'English' : '中文' }}
       </button>
       <button class="language-button" onclick="window.location.href = '/';">
-        {{ language === 'zh-CN' ? 'Back' : '返回' }}
+        {{ language === 'zh-CN' ? '返回' : 'Back' }}
       </button>
     </div>
     <div class="status-container">
@@ -45,6 +45,7 @@ import 'md-editor-v3/lib/style.css';
 import './Markdown.css';
 
 const theme = ref('light');
+const themeText = ref('Dark');
 const language = ref('en-US');
 const text = ref('');
 const opList = new OperationList();
@@ -58,12 +59,35 @@ let enableOnChange = true;
 
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
+
+  if (theme.value === 'dark') {
+    themeText.value = language.value === 'zh-CN' ? '明亮' : 'Light';
+  } else {
+    themeText.value = language.value === 'zh-CN' ? '暗黑' : 'Dark';
+  }
+
+  updateBodyStyles();
+}
+
+function toggleLanguage() {
+  language.value = language.value === 'zh-CN' ? 'en-US' : 'zh-CN';
+
+  if (theme.value === 'dark') {
+    themeText.value = language.value === 'zh-CN' ? '明亮' : 'Light';
+  } else {
+    themeText.value = language.value === 'zh-CN' ? '暗黑' : 'Dark';
+  }
+
+  updateBodyStyles();
+}
+
+function updateBodyStyles() {
   document.body.style.backgroundColor = theme.value === 'dark' ? 'black' : '';
   document.body.style.color = theme.value === 'dark' ? 'white' : '';
 }
 
-function toggleLanguage(lang) {
-  language.value = lang === 'en-US' ? 'zh-CN' : 'en-US';
+function goBack() {
+  window.location.href = '/';
 }
 
 function findStringChanges(original, modified) {
