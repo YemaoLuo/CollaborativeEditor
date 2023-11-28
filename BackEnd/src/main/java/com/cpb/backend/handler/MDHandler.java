@@ -12,10 +12,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
 import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 
 @ServerEndpoint("/MDHandler/{id}")
 @Component
@@ -23,16 +20,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MDHandler {
 
     private static final MDHandlerData handlerData = new MDHandlerData();
-    private static final Map<String, SortedSet<Operation>> sharedOperationMap = new ConcurrentHashMap<>();
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @OnOpen
     @SneakyThrows
     public void onOpen(Session session, @PathParam("id") String id) {
         handlerData.addSession(id, session);
-        SortedSet operations = sharedOperationMap.get(id);
-        if (operations != null) {
-            session.getBasicRemote().sendText(mapper.writeValueAsString(new Message(2, operations)));
+        if (handlerData.containsData(id)) {
+            session.getBasicRemote().sendText(mapper.writeValueAsString(new Message(2, handlerData.getData(id))));
         }
         log.info("Number of sessions for ID {}: {}", id, handlerData.getNumberOfSessions(id));
         log.info("Total number of sessions: {}", handlerData.getTotalNumberOfSessions());
@@ -56,18 +51,15 @@ public class MDHandler {
     public void onMessage(Session session, String message, @PathParam("id") String id) {
         Operation receivedMessage = mapper.readValue(message, Operation.class);
         log.info("Message received from: " + session.getId());
-        sharedOperationMap.computeIfAbsent(id, k -> new TreeSet<>()).add(receivedMessage);
+        handlerData.setData(id, receivedMessage);
+        SortedSet<Operation> operations = handlerData.getData(id);
         if (receivedMessage.getType().equals("init")) {
-            SortedSet operations = sharedOperationMap.get(id);
             session.getBasicRemote().sendText(mapper.writeValueAsString(new Message(2, mapper.writeValueAsString(operations))));
-        } else if (OperationUtil.addIfOperationValid(receivedMessage, sharedOperationMap.get(id))) {
+        } else if (OperationUtil.addIfOperationValid(receivedMessage, operations)) {
             handlerData.sendAllMessage(mapper.writeValueAsString(new Message(3, receivedMessage)), id, session);
         } else {
             log.info("Operation is not valid for ID {} from: {}", id, session.getId());
-            SortedSet operations = sharedOperationMap.get(id);
-            if (operations != null) {
-                session.getBasicRemote().sendText(mapper.writeValueAsString(new Message(2, operations)));
-            }
+            session.getBasicRemote().sendText(mapper.writeValueAsString(new Message(2, operations)));
         }
     }
 

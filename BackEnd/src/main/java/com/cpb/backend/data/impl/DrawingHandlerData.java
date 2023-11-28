@@ -12,10 +12,23 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DrawingHandlerData extends HandlerData {
 
     private static final Map<String, Set<Session>> sessions = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, byte[]> dataMap = new ConcurrentHashMap<>();
 
     @Override
     public void localizeData() {
 
+    }
+
+    public boolean containsData(String id) {
+        return dataMap.containsKey(id);
+    }
+
+    public byte[] getData(String id) {
+        return dataMap.get(id);
+    }
+
+    public void setData(String id, byte[] data) {
+        dataMap.put(id, data);
     }
 
     public void addSession(String id, Session session) {

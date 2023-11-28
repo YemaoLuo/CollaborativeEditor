@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ConcurrentHashMap;
 
 @ServerEndpoint("/DrawingHandler/{id}")
 @Component
@@ -19,15 +18,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DrawingHandler {
 
     private static final DrawingHandlerData handlerData = new DrawingHandlerData();
-    private static final ConcurrentHashMap<String, byte[]> picDataMap = new ConcurrentHashMap<>();
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @OnOpen
     @SneakyThrows
     public void onOpen(Session session, @PathParam("id") String id) {
         handlerData.addSession(id, session);
-        if (picDataMap.containsKey(id)) {
-            session.getBasicRemote().sendBinary(ByteBuffer.wrap(picDataMap.get(id)));
+        if (handlerData.containsData(id)) {
+            session.getBasicRemote().sendBinary(ByteBuffer.wrap(handlerData.getData(id)));
         }
         log.info("Number of sessions for ID {}: {}", id, handlerData.getNumberOfSessions(id));
         log.info("Total number of sessions: {}", handlerData.getTotalNumberOfSessions());
@@ -48,7 +46,7 @@ public class DrawingHandler {
     @SneakyThrows
     public void onMessage(Session session, byte[] message, @PathParam("id") String id) {
         log.info("Message received from: " + session.getId());
-        picDataMap.put(id, message);
+        handlerData.setData(id, message);
         handlerData.sendAllMessage(message, id, session);
     }
 
