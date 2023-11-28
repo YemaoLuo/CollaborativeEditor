@@ -24,6 +24,7 @@ public abstract class HandlerData {
 
     @SneakyThrows
     public void localizeData(String fileName, Object o) {
+        log.info("Localizing data to file: {}", fileName);
         FileOutputStream fileOut = new FileOutputStream(fileName);
         ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
         objectOut.writeObject(o);
@@ -32,6 +33,7 @@ public abstract class HandlerData {
     }
 
     public Object getLocalizeData(String fileName) {
+        log.info("Getting data from file: {}", fileName);
         Object object = null;
         ObjectInputStream objectIn = null;
         FileInputStream fileIn = null;
