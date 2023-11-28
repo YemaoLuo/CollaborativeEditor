@@ -142,6 +142,7 @@ onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search);
   const socketURL = `ws://${window.location.host}/MDHandler/${urlParams.get('id')}`;
   // const socketURL = `ws://localhost:12345/MDHandler/${urlParams.get('id')}`;
+  console.log('socketURL:', socketURL);
   socket = new WebSocket(socketURL);
 
   socket.addEventListener('message', (event) => {
