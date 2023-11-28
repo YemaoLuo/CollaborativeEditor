@@ -17,14 +17,32 @@ public class MDHandlerData extends HandlerData {
 
     private static final Map<String, Set<Session>> sessions = new ConcurrentHashMap<>();
     private static final Map<String, SortedSet<Operation>> dataMap = new ConcurrentHashMap<>();
+    private static final String prefixName = "DH_";
 
     @Override
-    public void localizeData() {
-
+    public void removeSession(String id, Session session) {
+        sessions.get(id).remove(session);
+        if (sessions.get(id).isEmpty()) {
+            sessions.remove(id);
+        }
+        if (sessions.get(id) == null || sessions.get(id).isEmpty()) {
+            super.localizeData(prefixName + id, dataMap.get(id));
+            dataMap.remove(id);
+        }
     }
 
     public boolean containsData(String id) {
-        return dataMap.containsKey(id);
+        if (dataMap.containsKey(id)) {
+            return true;
+        } else {
+            Object localizeData = super.getLocalizeData(prefixName + id);
+            if (localizeData == null) {
+                return false;
+            } else {
+                dataMap.put(id, (SortedSet<Operation>) localizeData);
+                return true;
+            }
+        }
     }
 
     public SortedSet<Operation> getData(String id) {
@@ -37,10 +55,6 @@ public class MDHandlerData extends HandlerData {
 
     public void addSession(String id, Session session) {
         super.addSession(sessions, id, session);
-    }
-
-    public void removeSession(String id, Session session) {
-        super.removeSession(sessions, id, session);
     }
 
     public int getTotalNumberOfSessions() {

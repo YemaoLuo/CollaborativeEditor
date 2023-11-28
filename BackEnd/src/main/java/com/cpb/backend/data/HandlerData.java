@@ -1,8 +1,10 @@
 package com.cpb.backend.data;
 
 import jakarta.websocket.Session;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.*;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -18,18 +20,34 @@ public abstract class HandlerData {
         sessions.computeIfAbsent(id, k -> new HashSet<>()).add(session);
     }
 
-    public void removeSession(Map<String, Set<Session>> sessions, String id, Session session) {
-        sessions.get(id).remove(session);
-        if (sessions.get(id).isEmpty()) {
-            sessions.remove(id);
-        }
-        // Check if 0 -> localize data
-        if (sessions.get(id) == null || sessions.get(id).isEmpty()) {
-            localizeData();
-        }
+    public abstract void removeSession(String id, Session session);
+
+    @SneakyThrows
+    public void localizeData(String fileName, Object o) {
+        FileOutputStream fileOut = new FileOutputStream(fileName);
+        ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
+        objectOut.writeObject(o);
+        objectOut.close();
+        fileOut.close();
     }
 
-    public abstract void localizeData();
+    public Object getLocalizeData(String fileName) {
+        Object object = null;
+        ObjectInputStream objectIn = null;
+        FileInputStream fileIn = null;
+        try {
+            fileIn = new FileInputStream(fileName);
+            objectIn = new ObjectInputStream(fileIn);
+            object = objectIn.readObject();
+            objectIn.close();
+            fileIn.close();
+        } catch (FileNotFoundException e) {
+            log.info("File not found: {}", fileName);
+        } catch (IOException | ClassNotFoundException e) {
+            log.error(e.getMessage(), e);
+        }
+        return object;
+    }
 
     public int getTotalNumberOfSessions(Map<String, Set<Session>> sessions) {
         return sessions.values().stream().mapToInt(Set::size).sum();

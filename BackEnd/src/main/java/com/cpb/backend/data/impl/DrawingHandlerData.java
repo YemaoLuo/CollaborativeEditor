@@ -13,14 +13,32 @@ public class DrawingHandlerData extends HandlerData {
 
     private static final Map<String, Set<Session>> sessions = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, byte[]> dataMap = new ConcurrentHashMap<>();
+    private static final String prefixName = "DH_";
 
     @Override
-    public void localizeData() {
-
+    public void removeSession(String id, Session session) {
+        sessions.get(id).remove(session);
+        if (sessions.get(id).isEmpty()) {
+            sessions.remove(id);
+        }
+        if (sessions.get(id) == null || sessions.get(id).isEmpty()) {
+            super.localizeData(prefixName + id, dataMap.get(id));
+            dataMap.remove(id);
+        }
     }
 
     public boolean containsData(String id) {
-        return dataMap.containsKey(id);
+        if (dataMap.containsKey(id)) {
+            return true;
+        } else {
+            Object localizeData = super.getLocalizeData(prefixName + id);
+            if (localizeData == null) {
+                return false;
+            } else {
+                dataMap.put(id, (byte[]) localizeData);
+                return true;
+            }
+        }
     }
 
     public byte[] getData(String id) {
@@ -33,10 +51,6 @@ public class DrawingHandlerData extends HandlerData {
 
     public void addSession(String id, Session session) {
         super.addSession(sessions, id, session);
-    }
-
-    public void removeSession(String id, Session session) {
-        super.removeSession(sessions, id, session);
     }
 
     public int getTotalNumberOfSessions() {
