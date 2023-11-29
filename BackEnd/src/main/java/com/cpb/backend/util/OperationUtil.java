@@ -12,19 +12,14 @@ public class OperationUtil {
             return true;
         }
 
-        // Check if the new operation conflicts with existing operations
         for (Operation op : operationSet) {
             if (op.getLatestTimestamp() > operation.getTimestamp()) {
-                // If the latest timestamp of an existing operation is greater than the timestamp of the new operation,
-                // it means the new operation is based on outdated data and should be rejected.
                 return false;
             }
         }
 
-        // Make a backup of the operation set to avoid concurrent modification errors
         SortedSet<Operation> backupSet = new TreeSet<>(operationSet);
 
-        // Apply the new operation and adjust positions if necessary
         StringBuilder sb = new StringBuilder();
         for (Operation op : backupSet) {
             String type = op.getType();
