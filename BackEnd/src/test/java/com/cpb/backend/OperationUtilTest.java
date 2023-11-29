@@ -20,8 +20,8 @@ public class OperationUtilTest {
         operationSet.add(new Operation("insert", 0, "c", System.currentTimeMillis() + 2, 0));
 
         assert OperationUtil.addIfOperationValid(new Operation("insert", 0, "d", System.currentTimeMillis() + 3, 0), operationSet);
-        assert !OperationUtil.addIfOperationValid(new Operation("insert", 10, "d", System.currentTimeMillis() + 4, 0), operationSet);
-        assert OperationUtil.addIfOperationValid(new Operation("delete", 0, "d", System.currentTimeMillis() + 5, 0), operationSet);
+        assert OperationUtil.addIfOperationValid(new Operation("insert", 10, "d", System.currentTimeMillis() + 4, 0), operationSet);
+        assert !OperationUtil.addIfOperationValid(new Operation("delete", 0, "d", System.currentTimeMillis() + 5, 0), operationSet);
         assert !OperationUtil.addIfOperationValid(new Operation("delete", 0, "d", System.currentTimeMillis() + 6, 0), operationSet);
     }
 
