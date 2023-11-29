@@ -21,9 +21,11 @@ public class MDHandlerData extends HandlerData {
 
     @Override
     public void removeSession(String id, Session session) {
-        sessions.get(id).remove(session);
-        if (sessions.get(id).isEmpty()) {
-            sessions.remove(id);
+        if (sessions.get(id) != null) {
+            sessions.get(id).remove(session);
+            if (sessions.get(id).isEmpty()) {
+                sessions.remove(id);
+            }
         }
         if (sessions.get(id) == null || sessions.get(id).isEmpty()) {
             super.localizeData(prefixName + id, dataMap.get(id));

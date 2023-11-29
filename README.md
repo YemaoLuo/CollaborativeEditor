@@ -8,4 +8,4 @@
 3. **V2.0**: Support multi documents; Support drawing board
 4. **V2.1**: Support pdf export; Support emoji; Improve drawing compress transmission
 5. **V3.0**: Support CRDT algorithm for md editor; Improve code efficiency
-6. **V3.1(TODO)**: Reconstruct socket and message data structure; Improve code efficiency
+6. **V3.1(TODO)**: Reconstruct socket and message data structure; Improve CRDT algorithm

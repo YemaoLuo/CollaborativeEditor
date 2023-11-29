@@ -51,6 +51,7 @@ const text = ref('');
 const opList = new OperationList();
 const online = ref('0');
 const editorRef = ref();
+const latestTimestamp = ref(Date.now());
 
 let socket = null;
 const isConnected = ref(false);
@@ -86,10 +87,6 @@ function updateBodyStyles() {
   document.body.style.color = theme.value === 'dark' ? 'white' : '';
 }
 
-function goBack() {
-  window.location.href = '/';
-}
-
 function findStringChanges(original, modified) {
   const dmp = new DiffMatchPatch();
   const diffs = dmp.diff_main(original, modified);
@@ -104,7 +101,8 @@ function findStringChanges(original, modified) {
       type: '',
       position: currentPosition,
       content: text,
-      timestamp,
+      timestamp: timestamp,
+      latestTimestamp: 0,
     };
 
     switch (op) {
@@ -151,6 +149,7 @@ watch(text, (newValue, oldValue) => {
   const operations = findStringChanges(oldValue, newValue);
 
   operations.forEach((op) => {
+    op.latestTimestamp = latestTimestamp.value;
     console.log(op);
     opList.add(op);
 
@@ -164,6 +163,7 @@ onMounted(() => {
   document.title = 'Markdown Editor';
 
   const urlParams = new URLSearchParams(window.location.search);
+  // TODO
   const socketURL = `ws://${window.location.host}/MDHandler/${urlParams.get('id')}`;
   // const socketURL = `ws://localhost:12345/MDHandler/${urlParams.get('id')}`;
   console.log('socketURL:', socketURL);
@@ -189,6 +189,7 @@ onMounted(() => {
         newText = opList.getString();
       }
 
+      latestTimestamp.value = opList.getLocalTimestamp();
       text.value = newText;
 
       if (preText.length === 0) {

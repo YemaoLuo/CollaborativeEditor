@@ -72,7 +72,6 @@ public abstract class HandlerData {
                 }
             } catch (Exception e) {
                 log.error("Error sending message to session: {}", s.getId());
-                log.error(e.getMessage(), e);
             }
         });
     }

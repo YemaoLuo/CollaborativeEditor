@@ -20,6 +20,10 @@ export class OperationList {
         this.operations.sort((a, b) => a.timestamp - b.timestamp);
     }
 
+    getLocalTimestamp() {
+        return this.operations[this.operations.length - 1].timestamp;
+    }
+
     getString() {
         let str = "";
         for (const operation of this.operations) {
