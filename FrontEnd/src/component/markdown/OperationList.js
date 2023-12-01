@@ -20,17 +20,33 @@ export class OperationList {
         this.operations.sort((a, b) => a.timestamp - b.timestamp);
     }
 
+    getLocalTimestamp() {
+        return this.operations[this.operations.length - 1].timestamp;
+    }
+
     getString() {
         let str = "";
         for (const operation of this.operations) {
+            if (operation.timestamp < operation.latestTimestamp) {
+                // Adjust position based on previous operations' effects
+                if (operation.type === "insert") {
+                    operation.position -= str.substring(0, operation.position).length;
+                } else if (operation.type === "delete") {
+                    operation.position -= str.substring(0, operation.position).length;
+                    operation.content = str.substring(operation.position, operation.position + operation.content.length);
+                }
+            }
+
             if (operation.type === "insert") {
                 str = str.slice(0, operation.position) + operation.content + str.slice(operation.position);
             } else if (operation.type === "delete") {
                 str = str.slice(0, operation.position) + str.slice(operation.position + operation.content.length);
             }
         }
+
         return str;
     }
+
 
     getSortedOperations() {
         return [...this.operations];

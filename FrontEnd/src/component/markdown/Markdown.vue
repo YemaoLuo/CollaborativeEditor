@@ -4,14 +4,14 @@
       {{ language === 'zh-CN' ? '在线协作Markdown编辑器' : 'Collaborative Markdown Editor' }}
     </h1>
     <div class="button-group">
-      <button class="theme-button" :class="{ dark: theme === 'dark' }" @click="toggleTheme">
-        {{ theme === 'light' ? 'Dark' : 'Light' }}
+      <button class="theme-button" :class="{ dark: theme === 'dark' }" @click="toggleTheme()">
+        {{ themeText }}
       </button>
       <button class="language-button" :class="{ active: language === 'zh-CN' }" @click="toggleLanguage(language)">
         {{ language === 'zh-CN' ? 'English' : '中文' }}
       </button>
       <button class="language-button" onclick="window.location.href = '/';">
-        {{ language === 'zh-CN' ? 'Back' : '返回' }}
+        {{ language === 'zh-CN' ? '返回' : 'Back' }}
       </button>
     </div>
     <div class="status-container">
@@ -45,11 +45,13 @@ import 'md-editor-v3/lib/style.css';
 import './Markdown.css';
 
 const theme = ref('light');
+const themeText = ref('Dark');
 const language = ref('en-US');
 const text = ref('');
 const opList = new OperationList();
 const online = ref('0');
 const editorRef = ref();
+const latestTimestamp = ref(Date.now());
 
 let socket = null;
 const isConnected = ref(false);
@@ -58,12 +60,31 @@ let enableOnChange = true;
 
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
-  document.body.style.backgroundColor = theme.value === 'dark' ? 'black' : '';
-  document.body.style.color = theme.value === 'dark' ? 'white' : '';
+
+  if (theme.value === 'dark') {
+    themeText.value = language.value === 'zh-CN' ? '明亮' : 'Light';
+  } else {
+    themeText.value = language.value === 'zh-CN' ? '暗黑' : 'Dark';
+  }
+
+  updateBodyStyles();
 }
 
-function toggleLanguage(lang) {
-  language.value = lang === 'en-US' ? 'zh-CN' : 'en-US';
+function toggleLanguage() {
+  language.value = language.value === 'zh-CN' ? 'en-US' : 'zh-CN';
+
+  if (theme.value === 'dark') {
+    themeText.value = language.value === 'zh-CN' ? '明亮' : 'Light';
+  } else {
+    themeText.value = language.value === 'zh-CN' ? '暗黑' : 'Dark';
+  }
+
+  updateBodyStyles();
+}
+
+function updateBodyStyles() {
+  document.body.style.backgroundColor = theme.value === 'dark' ? 'black' : '';
+  document.body.style.color = theme.value === 'dark' ? 'white' : '';
 }
 
 function findStringChanges(original, modified) {
@@ -80,7 +101,8 @@ function findStringChanges(original, modified) {
       type: '',
       position: currentPosition,
       content: text,
-      timestamp,
+      timestamp: timestamp,
+      latestTimestamp: 0,
     };
 
     switch (op) {
@@ -127,6 +149,7 @@ watch(text, (newValue, oldValue) => {
   const operations = findStringChanges(oldValue, newValue);
 
   operations.forEach((op) => {
+    op.latestTimestamp = latestTimestamp.value;
     console.log(op);
     opList.add(op);
 
@@ -140,8 +163,10 @@ onMounted(() => {
   document.title = 'Markdown Editor';
 
   const urlParams = new URLSearchParams(window.location.search);
+  // TODO
   const socketURL = `ws://${window.location.host}/MDHandler/${urlParams.get('id')}`;
   // const socketURL = `ws://localhost:12345/MDHandler/${urlParams.get('id')}`;
+  console.log('socketURL:', socketURL);
   socket = new WebSocket(socketURL);
 
   socket.addEventListener('message', (event) => {
@@ -164,6 +189,7 @@ onMounted(() => {
         newText = opList.getString();
       }
 
+      latestTimestamp.value = opList.getLocalTimestamp();
       text.value = newText;
 
       if (preText.length === 0) {

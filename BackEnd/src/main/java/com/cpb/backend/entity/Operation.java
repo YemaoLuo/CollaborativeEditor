@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 /**
  * Type:<p>
  * 1. insert<p>
@@ -13,11 +15,12 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Operation implements Comparable<Operation> {
+public class Operation implements Comparable<Operation>, Serializable {
     private String type;
     private int position;
     private String content;
     private long timestamp;
+    private long latestTimestamp;
 
     @Override
     public int compareTo(Operation o) {
