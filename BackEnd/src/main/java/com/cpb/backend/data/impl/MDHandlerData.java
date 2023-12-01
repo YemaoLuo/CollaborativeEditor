@@ -17,7 +17,7 @@ public class MDHandlerData extends HandlerData {
 
     private static final Map<String, Set<Session>> sessions = new ConcurrentHashMap<>();
     private static final Map<String, SortedSet<Operation>> dataMap = new ConcurrentHashMap<>();
-    private static final String prefixName = "DH_";
+    private static final String prefixName = "MD_";
 
     @Override
     public void removeSession(String id, Session session) {
