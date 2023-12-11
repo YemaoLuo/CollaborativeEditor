@@ -12,6 +12,8 @@ public class OperationUtil {
             return true;
         }
 
+        operationSet.add(operation);
+
         for (Operation op : operationSet) {
             if (op.getLatestTimestamp() > operation.getTimestamp()) {
                 return false;
@@ -56,7 +58,6 @@ public class OperationUtil {
             }
         }
 
-        operationSet.add(operation);
         return true;
     }
 }
